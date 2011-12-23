@@ -16,7 +16,7 @@ use strict qw(subs vars);
 # (and so on)
 
 BEGIN { eval q{ use vars qw($VERSION) } }
-$VERSION = sprintf '%d.%02d', q$Revision: 0.78 $ =~ m/(\d+)/xmsg;
+$VERSION = sprintf '%d.%02d', q$Revision: 0.79 $ =~ m/(\d+)/xmsg;
 
 BEGIN {
     my $PERL5LIB = __FILE__;
@@ -1175,6 +1175,8 @@ sub _charlist {
     my $modifier = pop @_;
     my @char = @_;
 
+    my $ignorecase = ($modifier =~ m/i/oxms) ? 1 : 0;
+
     # unescape character
     for (my $i=0; $i <= $#char; $i++) {
 
@@ -1251,6 +1253,16 @@ sub _charlist {
         }
 
         # POSIX-style character classes
+        elsif ($ignorecase and ($char[$i] =~ m/\A ( \[\: \^? (?:lower|upper) :\] ) \z/oxms)) {
+            $char[$i] = {
+
+                '[:lower:]'   => '[\x41-\x5A\x61-\x7A]',
+                '[:upper:]'   => '[\x41-\x5A\x61-\x7A]',
+                '[:^lower:]'  => '(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE])',
+                '[:^upper:]'  => '(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE])',
+
+            }->{$1};
+        }
         elsif ($char[$i] =~ m/\A ( \[\: \^? (?:alnum|alpha|ascii|blank|cntrl|digit|graph|lower|print|punct|space|upper|word|xdigit) :\] ) \z/oxms) {
             $char[$i] = {
 
@@ -1268,7 +1280,6 @@ sub _charlist {
                 '[:upper:]'   => '[\x41-\x5A]',
                 '[:word:]'    => '[\x30-\x39\x41-\x5A\x5F\x61-\x7A]',
                 '[:xdigit:]'  => '[\x30-\x39\x41-\x46\x61-\x66]',
-
                 '[:^alnum:]'  => '(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x30-\x39\x41-\x5A\x61-\x7A])',
                 '[:^alpha:]'  => '(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x41-\x5A\x61-\x7A])',
                 '[:^ascii:]'  => '(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x00-\x7F])',
@@ -2170,6 +2181,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
   If no EUC-JP string is specified via =~ operator, the $_ variable is translated.
   $modifier are:
 
+  ------------------------------------------------------
   Modifier   Meaning
   ------------------------------------------------------
   c          Complement $searchlist

@@ -455,7 +455,7 @@ See also code table:
 
 SEE ALSO
 
-perl, Sjis.pm
+perl, EUCJP.pm, Eeucjp.pm, jacode.pl
 
 Japanese EUC
 http://euc.jp/i18n/euc-jp.txt
