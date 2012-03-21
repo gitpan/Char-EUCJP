@@ -3,12 +3,18 @@ package Char::Eeucjp;
 #
 # Char::Eeucjp - Run-time routines for Char/EUCJP.pm
 #
-# Copyright (c) 2008, 2009, 2010, 2011 INABA Hitoshi <ina@cpan.org>
+# Copyright (c) 2008, 2009, 2010, 2011, 2012 INABA Hitoshi <ina@cpan.org>
 #
 ######################################################################
 
 use 5.00503;
 use strict qw(subs vars);
+
+BEGIN {
+    if ($^X =~ m/ jperl /oxmsi) {
+        die "$0 need perl(not jperl) 5.00503 or later. (\$^X==$^X)";
+    }
+}
 
 # 12.3. Delaying use Until Runtime
 # in Chapter 12. Packages, Libraries, and Modules
@@ -16,7 +22,7 @@ use strict qw(subs vars);
 # (and so on)
 
 BEGIN { eval q{ use vars qw($VERSION) } }
-$VERSION = sprintf '%d.%02d', q$Revision: 0.79 $ =~ m/(\d+)/xmsg;
+$VERSION = sprintf '%d.%02d', q$Revision: 0.80 $ =~ m/(\d+)/xmsg;
 
 BEGIN {
     my $PERL5LIB = __FILE__;
@@ -106,6 +112,10 @@ BEGIN {
 # in Chapter 29: Functions
 # of ISBN 0-596-00027-8 Programming Perl Third Edition.
 
+# P.863 flock
+# in Chapter 27: Functions
+# of ISBN 978-0-596-00492-7 Programming Perl 4th Edition.
+
 sub LOCK_SH() {1}
 sub LOCK_EX() {2}
 sub LOCK_UN() {8}
@@ -118,12 +128,6 @@ sub cluck(@);
 sub confess(@);
 
 my $__FILE__ = __FILE__;
-
-BEGIN {
-    if ($^X =~ m/ jperl /oxmsi) {
-        die "$0 need perl(not jperl) 5.00503 or later. (\$^X==$^X)";
-    }
-}
 
 my $your_char = q{\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[\x00-\xFF]};
 
@@ -379,6 +383,68 @@ sub Char::EUCJP::index($$;$);
 sub Char::EUCJP::rindex($$;$);
 
 #
+# Character class
+#
+use vars qw(
+    @anchor
+    @dot
+    @dot_s
+    @eD
+    @eS
+    @eW
+    @eH
+    @eV
+    @eR
+    @eN
+    @not_alnum
+    @not_alpha
+    @not_ascii
+    @not_blank
+    @not_cntrl
+    @not_digit
+    @not_graph
+    @not_lower
+    @not_lower_i
+    @not_print
+    @not_punct
+    @not_space
+    @not_upper
+    @not_upper_i
+    @not_word
+    @not_xdigit
+    @eb
+    @eB
+);
+@{Char::Eeucjp::anchor}      = qr{\G(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE])*?};
+@{Char::Eeucjp::dot}         = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x0A])};
+@{Char::Eeucjp::dot_s}       = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE])};
+@{Char::Eeucjp::eD}          = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE0-9])};
+@{Char::Eeucjp::eS}          = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x09\x0A\x0C\x0D\x20])};
+@{Char::Eeucjp::eW}          = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE0-9A-Z_a-z])};
+@{Char::Eeucjp::eH}          = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x09\x20])};
+@{Char::Eeucjp::eV}          = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x0C\x0A\x0D])};
+@{Char::Eeucjp::eR}          = qr{(?:\x0D\x0A|[\x0A\x0D])};
+@{Char::Eeucjp::eN}          = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x0A])};
+@{Char::Eeucjp::not_alnum}   = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x30-\x39\x41-\x5A\x61-\x7A])};
+@{Char::Eeucjp::not_alpha}   = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x41-\x5A\x61-\x7A])};
+@{Char::Eeucjp::not_ascii}   = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x00-\x7F])};
+@{Char::Eeucjp::not_blank}   = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x09\x20])};
+@{Char::Eeucjp::not_cntrl}   = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x00-\x1F\x7F])};
+@{Char::Eeucjp::not_digit}   = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x30-\x39])};
+@{Char::Eeucjp::not_graph}   = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x21-\x7F])};
+@{Char::Eeucjp::not_lower}   = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x61-\x7A])};
+@{Char::Eeucjp::not_lower_i} = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE])};
+@{Char::Eeucjp::not_print}   = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x20-\x7F])};
+@{Char::Eeucjp::not_punct}   = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x21-\x2F\x3A-\x3F\x40\x5B-\x5F\x60\x7B-\x7E])};
+@{Char::Eeucjp::not_space}   = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x09\x0A\x0B\x0C\x0D\x20])};
+@{Char::Eeucjp::not_upper}   = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x41-\x5A])};
+@{Char::Eeucjp::not_upper_i} = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE])};
+@{Char::Eeucjp::not_word}    = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x30-\x39\x41-\x5A\x5F\x61-\x7A])};
+@{Char::Eeucjp::not_xdigit}  = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x30-\x39\x41-\x46\x61-\x66])};
+@{Char::Eeucjp::eb}          = qr{(?:\A(?=[0-9A-Z_a-z])|(?<=[\x00-\x2F\x40\x5B-\x5E\x60\x7B-\xFF])(?=[0-9A-Z_a-z])|(?<=[0-9A-Z_a-z])(?=[\x00-\x2F\x40\x5B-\x5E\x60\x7B-\xFF]|\z))};
+@{Char::Eeucjp::eB}          = qr{(?:(?<=[0-9A-Z_a-z])(?=[0-9A-Z_a-z])|(?<=[\x00-\x2F\x40\x5B-\x5E\x60\x7B-\xFF])(?=[\x00-\x2F\x40\x5B-\x5E\x60\x7B-\xFF]))};
+
+#
 # @ARGV wildcard globbing
 #
 if ($^O =~ /\A (?: MSWin32 | NetWare | symbian | dos ) \z/oxms) {
@@ -407,6 +473,10 @@ sub Char::Eeucjp::split(;$$$) {
     # P.794 29.2.161. split
     # in Chapter 29: Functions
     # of ISBN 0-596-00027-8 Programming Perl Third Edition.
+
+    # P.951 split
+    # in Chapter 27: Functions
+    # of ISBN 978-0-596-00492-7 Programming Perl 4th Edition.
 
     my $pattern = $_[0];
     my $string  = $_[1];
@@ -729,7 +799,7 @@ sub Char::Eeucjp::rindex($$;$) {
     }
 
     # EUC-JP regexp mark last m// or qr// matched
-    sub Char::Eeucjp::m_matched() {
+    sub Char::Eeucjp::matched() {
         $last_s_matched = 0;
     }
 
@@ -744,8 +814,11 @@ sub Char::Eeucjp::rindex($$;$) {
     # in Chapter 31. Pragmatic Modules
     # of ISBN 0-596-00027-8 Programming Perl Third Edition.
 
-    @Char::Eeucjp::m_matched = (qr/(?{Char::Eeucjp::m_matched})/);
-    @Char::Eeucjp::s_matched = (qr/(?{Char::Eeucjp::s_matched})/);
+    # P.1026 re
+    # in Chapter 29. Pragmatic Modules
+    # of ISBN 978-0-596-00492-7 Programming Perl 4th Edition.
+
+    @Char::Eeucjp::matched = (qr/(?{Char::Eeucjp::matched})/);
 }
 
 #
@@ -755,9 +828,9 @@ sub classic_character_class($) {
     my($char) = @_;
 
     return {
-        '\D' => '(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE0-9])',
-        '\S' => '(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x09\x0A\x0C\x0D\x20])',
-        '\W' => '(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE0-9A-Z_a-z])',
+        '\D' => '@{Char::Eeucjp::eD}',
+        '\S' => '@{Char::Eeucjp::eS}',
+        '\W' => '@{Char::Eeucjp::eW}',
         '\d' => '[0-9]',
                  # \t  \n  \f  \r space
         '\s' => '[\x09\x0A\x0C\x0D\x20]',
@@ -766,16 +839,22 @@ sub classic_character_class($) {
         '\X' => 'X',
 
         # \h \v \H \V
-        #
+
         # P.114 Character Class Shortcuts
         # in Chapter 7: In the World of Regular Expressions
         # of ISBN 978-0-596-52010-6 Learning Perl, Fifth Edition
 
-        '\H' => '(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x09\x20])',
-        '\V' => '(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x0C\x0A\x0D])',
+        # P.196 Table 5-9. Alphanumeric regex metasymbols
+        # in Chapter 5. Pattern Matching
+        # of ISBN 978-0-596-00492-7 Programming Perl 4th Edition.
+
+        # (and so on)
+
+        '\H' => '@{Char::Eeucjp::eH}',
+        '\V' => '@{Char::Eeucjp::eV}',
         '\h' => '[\x09\x20]',
         '\v' => '[\x0C\x0A\x0D]',
-        '\R' => '(?:\x0D\x0A|[\x0A\x0D])',
+        '\R' => '@{Char::Eeucjp::eR}',
 
         # \N
         #
@@ -783,19 +862,23 @@ sub classic_character_class($) {
         # Character Classes and other Special Escapes
         # Any character but \n (experimental). Not affected by /s modifier
 
-        '\N' => '(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x0A])',
+        '\N' => '@{Char::Eeucjp::eN}',
 
         # \b \B
-        #
+
         # P.131 Word boundaries: \b, \B, \<, \>, ...
         # in Chapter 3: Overview of Regular Expression Features and Flavors
         # of ISBN 0-596-00289-0 Mastering Regular Expressions, Second edition
 
+        # P.219 Boundaries: The \b and \B Assertions
+        # in Chapter 5: Pattern Matching
+        # of ISBN 978-0-596-00492-7 Programming Perl 4th Edition.
+
         # '\b' => '(?:(?<=\A|\W)(?=\w)|(?<=\w)(?=\W|\z))',
-        '\b' => '(?:\A(?=[0-9A-Z_a-z])|(?<=[\x00-\x2F\x40\x5B-\x5E\x60\x7B-\xFF])(?=[0-9A-Z_a-z])|(?<=[0-9A-Z_a-z])(?=[\x00-\x2F\x40\x5B-\x5E\x60\x7B-\xFF]|\z))',
+        '\b' => '@{Char::Eeucjp::eb}',
 
         # '\B' => '(?:(?<=\w)(?=\w)|(?<=\W)(?=\W))',
-        '\B' => '(?:(?<=[0-9A-Z_a-z])(?=[0-9A-Z_a-z])|(?<=[\x00-\x2F\x40\x5B-\x5E\x60\x7B-\xFF])(?=[\x00-\x2F\x40\x5B-\x5E\x60\x7B-\xFF]))',
+        '\B' => '@{Char::Eeucjp::eB}',
 
     }->{$char} || '';
 }
@@ -944,7 +1027,7 @@ sub _charlist_tr {
         }
     }
 
-    # join separated multiple octet
+    # join separated multiple-octet
     @char = join('',@char) =~ m/\G (\\-|$q_char) /oxmsg;
 
     # unescape '-'
@@ -969,53 +1052,53 @@ sub _charlist_tr {
             croak "$0: invalid [] range \"\\x" . unpack('H*',$char[$i-1]) . '-\\x' . unpack('H*',$char[$i+1]) . '" in regexp';
         }
 
-        # range of multiple octet code
+        # range of multiple-octet code
         if (length($char[$i-1]) == 1) {
             if (length($char[$i+1]) == 1) {
-                push @range, grep {($char[$i-1] le $_) and ($_ le $char[$i+1])} &chars1();
+                push @range, grep {($char[$i-1] le $_) and ($_ le $char[$i+1])} chars1();
             }
             elsif (length($char[$i+1]) == 2) {
-                push @range, grep {$char[$i-1] le $_}                           &chars1();
-                push @range, grep {$_ le $char[$i+1]}                           &chars2();
+                push @range, grep {$char[$i-1] le $_}                           chars1();
+                push @range, grep {$_ le $char[$i+1]}                           chars2();
             }
             elsif (length($char[$i+1]) == 3) {
-                push @range, grep {$char[$i-1] le $_}                           &chars1();
-                push @range,                                                    &chars2();
-                push @range, grep {$_ le $char[$i+1]}                           &chars3();
+                push @range, grep {$char[$i-1] le $_}                           chars1();
+                push @range,                                                    chars2();
+                push @range, grep {$_ le $char[$i+1]}                           chars3();
             }
             elsif (length($char[$i+1]) == 4) {
-                push @range, grep {$char[$i-1] le $_}                           &chars1();
-                push @range,                                                    &chars2();
-                push @range,                                                    &chars3();
-                push @range, grep {$_ le $char[$i+1]}                           &chars4();
+                push @range, grep {$char[$i-1] le $_}                           chars1();
+                push @range,                                                    chars2();
+                push @range,                                                    chars3();
+                push @range, grep {$_ le $char[$i+1]}                           chars4();
             }
         }
         elsif (length($char[$i-1]) == 2) {
             if (length($char[$i+1]) == 2) {
-                push @range, grep {($char[$i-1] le $_) and ($_ le $char[$i+1])} &chars2();
+                push @range, grep {($char[$i-1] le $_) and ($_ le $char[$i+1])} chars2();
             }
             elsif (length($char[$i+1]) == 3) {
-                push @range, grep {$char[$i-1] le $_}                           &chars2();
-                push @range, grep {$_ le $char[$i+1]}                           &chars3();
+                push @range, grep {$char[$i-1] le $_}                           chars2();
+                push @range, grep {$_ le $char[$i+1]}                           chars3();
             }
             elsif (length($char[$i+1]) == 4) {
-                push @range, grep {$char[$i-1] le $_}                           &chars2();
-                push @range,                                                    &chars3();
-                push @range, grep {$_ le $char[$i+1]}                           &chars4();
+                push @range, grep {$char[$i-1] le $_}                           chars2();
+                push @range,                                                    chars3();
+                push @range, grep {$_ le $char[$i+1]}                           chars4();
             }
         }
         elsif (length($char[$i-1]) == 3) {
             if (length($char[$i+1]) == 3) {
-                push @range, grep {($char[$i-1] le $_) and ($_ le $char[$i+1])} &chars3();
+                push @range, grep {($char[$i-1] le $_) and ($_ le $char[$i+1])} chars3();
             }
             elsif (length($char[$i+1]) == 4) {
-                push @range, grep {$char[$i-1] le $_}                           &chars3();
-                push @range, grep {$_ le $char[$i+1]}                           &chars4();
+                push @range, grep {$char[$i-1] le $_}                           chars3();
+                push @range, grep {$_ le $char[$i+1]}                           chars4();
             }
         }
         elsif (length($char[$i-1]) == 4) {
             if (length($char[$i+1]) == 4) {
-                push @range, grep {($char[$i-1] le $_) and ($_ le $char[$i+1])} &chars4();
+                push @range, grep {($char[$i-1] le $_) and ($_ le $char[$i+1])} chars4();
             }
         }
 
@@ -1052,7 +1135,7 @@ sub _octets {
             }
         }
 
-        # not ignore case or one of multiple octet
+        # not ignore case or one of multiple-octet
         else {
             if ($a == $z) {
                 return sprintf('\x%02X',          $a);
@@ -1127,7 +1210,7 @@ sub _octets {
         return "(?:$octets1|$octets2)";
     }
 
-    # multiple octet code
+    # multiple-octet code
     else {
         my(undef,$aa) = unpack 'Ca*', $_[0];
         my(undef,$zz) = unpack 'Ca*', $_[1];
@@ -1139,29 +1222,29 @@ sub _octets {
         }
         elsif (($a+1) == $z) {
             return '(?:' . join('|',
-                sprintf('\x%02X%s',         $a,         _octets($length-1,$aa,                &maxchar($length-1),$modifier)),
-                sprintf('\x%02X%s',              $z,    _octets($length-1,&minchar($length-1),$zz,                $modifier)),
+                sprintf('\x%02X%s',         $a,         _octets($length-1,$aa,                maxchar($length-1),$modifier)),
+                sprintf('\x%02X%s',              $z,    _octets($length-1,minchar($length-1),$zz,                $modifier)),
             ) . ')';
         }
         elsif (($a+2) == $z) {
             return '(?:' . join('|',
-                sprintf('\x%02X%s',         $a,         _octets($length-1,$aa,                &maxchar($length-1),$modifier)),
-                sprintf('\x%02X%s',         $a+1,       _octets($length-1,&minchar($length-1),&maxchar($length-1),$modifier)),
-                sprintf('\x%02X%s',              $z,    _octets($length-1,&minchar($length-1),$zz,                $modifier)),
+                sprintf('\x%02X%s',         $a,         _octets($length-1,$aa,               maxchar($length-1),$modifier)),
+                sprintf('\x%02X%s',         $a+1,       _octets($length-1,minchar($length-1),maxchar($length-1),$modifier)),
+                sprintf('\x%02X%s',              $z,    _octets($length-1,minchar($length-1),$zz,               $modifier)),
             ) . ')';
         }
         elsif (($a+3) == $z) {
             return '(?:' . join('|',
-                sprintf('\x%02X%s',         $a,         _octets($length-1,$aa,                &maxchar($length-1),$modifier)),
-                sprintf('[\x%02X\x%02X]%s', $a+1,$z-1,  _octets($length-1,&minchar($length-1),&maxchar($length-1),$modifier)),
-                sprintf('\x%02X%s',              $z,    _octets($length-1,&minchar($length-1),$zz,                $modifier)),
+                sprintf('\x%02X%s',         $a,         _octets($length-1,$aa,               maxchar($length-1),$modifier)),
+                sprintf('[\x%02X\x%02X]%s', $a+1,$z-1,  _octets($length-1,minchar($length-1),maxchar($length-1),$modifier)),
+                sprintf('\x%02X%s',              $z,    _octets($length-1,minchar($length-1),$zz,               $modifier)),
             ) . ')';
         }
         else {
             return '(?:' . join('|',
-                sprintf('\x%02X%s',          $a,        _octets($length-1,$aa,                &maxchar($length-1),$modifier)),
-                sprintf('[\x%02X-\x%02X]%s', $a+1,$z-1, _octets($length-1,&minchar($length-1),&maxchar($length-1),$modifier)),
-                sprintf('\x%02X%s',               $z,   _octets($length-1,&minchar($length-1),$zz,                $modifier)),
+                sprintf('\x%02X%s',          $a,        _octets($length-1,$aa,               maxchar($length-1),$modifier)),
+                sprintf('[\x%02X-\x%02X]%s', $a+1,$z-1, _octets($length-1,minchar($length-1),maxchar($length-1),$modifier)),
+                sprintf('\x%02X%s',               $z,   _octets($length-1,minchar($length-1),$zz,               $modifier)),
             ) . ')';
         }
     }
@@ -1239,15 +1322,15 @@ sub _charlist {
                 '\d' => '[0-9]',
                 '\s' => '[\x09\x0A\x0C\x0D\x20]',
                 '\w' => '[0-9A-Z_a-z]',
-                '\D' => '(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE0-9])',
-                '\S' => '(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x09\x0A\x0C\x0D\x20])',
-                '\W' => '(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE0-9A-Z_a-z])',
+                '\D' => '@{Char::Eeucjp::eD}',
+                '\S' => '@{Char::Eeucjp::eS}',
+                '\W' => '@{Char::Eeucjp::eW}',
 
-                '\H' => '(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x09\x20])',
-                '\V' => '(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x0C\x0A\x0D])',
+                '\H' => '@{Char::Eeucjp::eH}',
+                '\V' => '@{Char::Eeucjp::eV}',
                 '\h' => '[\x09\x20]',
                 '\v' => '[\x0C\x0A\x0D]',
-                '\R' => '(?:\x0D\x0A|[\x0A\x0D])',
+                '\R' => '@{Char::Eeucjp::eR}',
 
             }->{$1};
         }
@@ -1258,8 +1341,8 @@ sub _charlist {
 
                 '[:lower:]'   => '[\x41-\x5A\x61-\x7A]',
                 '[:upper:]'   => '[\x41-\x5A\x61-\x7A]',
-                '[:^lower:]'  => '(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE])',
-                '[:^upper:]'  => '(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE])',
+                '[:^lower:]'  => '@{Char::Eeucjp::not_lower_i}',
+                '[:^upper:]'  => '@{Char::Eeucjp::not_upper_i}',
 
             }->{$1};
         }
@@ -1280,20 +1363,20 @@ sub _charlist {
                 '[:upper:]'   => '[\x41-\x5A]',
                 '[:word:]'    => '[\x30-\x39\x41-\x5A\x5F\x61-\x7A]',
                 '[:xdigit:]'  => '[\x30-\x39\x41-\x46\x61-\x66]',
-                '[:^alnum:]'  => '(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x30-\x39\x41-\x5A\x61-\x7A])',
-                '[:^alpha:]'  => '(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x41-\x5A\x61-\x7A])',
-                '[:^ascii:]'  => '(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x00-\x7F])',
-                '[:^blank:]'  => '(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x09\x20])',
-                '[:^cntrl:]'  => '(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x00-\x1F\x7F])',
-                '[:^digit:]'  => '(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x30-\x39])',
-                '[:^graph:]'  => '(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x21-\x7F])',
-                '[:^lower:]'  => '(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x61-\x7A])',
-                '[:^print:]'  => '(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x20-\x7F])',
-                '[:^punct:]'  => '(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x21-\x2F\x3A-\x3F\x40\x5B-\x5F\x60\x7B-\x7E])',
-                '[:^space:]'  => '(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x09\x0A\x0B\x0C\x0D\x20])',
-                '[:^upper:]'  => '(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x41-\x5A])',
-                '[:^word:]'   => '(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x30-\x39\x41-\x5A\x5F\x61-\x7A])',
-                '[:^xdigit:]' => '(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x30-\x39\x41-\x46\x61-\x66])',
+                '[:^alnum:]'  => '@{Char::Eeucjp::not_alnum}',
+                '[:^alpha:]'  => '@{Char::Eeucjp::not_alpha}',
+                '[:^ascii:]'  => '@{Char::Eeucjp::not_ascii}',
+                '[:^blank:]'  => '@{Char::Eeucjp::not_blank}',
+                '[:^cntrl:]'  => '@{Char::Eeucjp::not_cntrl}',
+                '[:^digit:]'  => '@{Char::Eeucjp::not_digit}',
+                '[:^graph:]'  => '@{Char::Eeucjp::not_graph}',
+                '[:^lower:]'  => '@{Char::Eeucjp::not_lower}',
+                '[:^print:]'  => '@{Char::Eeucjp::not_print}',
+                '[:^punct:]'  => '@{Char::Eeucjp::not_punct}',
+                '[:^space:]'  => '@{Char::Eeucjp::not_space}',
+                '[:^upper:]'  => '@{Char::Eeucjp::not_upper}',
+                '[:^word:]'   => '@{Char::Eeucjp::not_word}',
+                '[:^xdigit:]' => '@{Char::Eeucjp::not_xdigit}',
 
             }->{$1};
         }
@@ -1335,48 +1418,48 @@ sub _charlist {
                 }
             }
 
-            # range of multiple octet code
+            # range of multiple-octet code
             elsif (length($char[$i-1]) == length($char[$i+1])) {
                 push @charlist, _octets(length($char[$i-1]), $char[$i-1], $char[$i+1], $modifier);
             }
             elsif (length($char[$i-1]) == 1) {
                 if (length($char[$i+1]) == 2) {
                     push @charlist,
-                        _octets(1, $char[$i-1], &maxchar(1), $modifier),
-                        _octets(2, &minchar(2), $char[$i+1], $modifier);
+                        _octets(1, $char[$i-1], maxchar(1),  $modifier),
+                        _octets(2, minchar(2),  $char[$i+1], $modifier);
                 }
                 elsif (length($char[$i+1]) == 3) {
                     push @charlist,
-                        _octets(1, $char[$i-1], &maxchar(1), $modifier),
-                        _octets(2, &minchar(2), &maxchar(2), $modifier),
-                        _octets(3, &minchar(3), $char[$i+1], $modifier);
+                        _octets(1, $char[$i-1], maxchar(1),  $modifier),
+                        _octets(2, minchar(2),  maxchar(2),  $modifier),
+                        _octets(3, minchar(3),  $char[$i+1], $modifier);
                 }
                 elsif (length($char[$i+1]) == 4) {
                     push @charlist,
-                        _octets(1, $char[$i-1], &maxchar(1), $modifier),
-                        _octets(2, &minchar(2), &maxchar(2), $modifier),
-                        _octets(3, &minchar(3), &maxchar(3), $modifier),
-                        _octets(4, &minchar(4), $char[$i+1], $modifier);
+                        _octets(1, $char[$i-1], maxchar(1),  $modifier),
+                        _octets(2, minchar(2),  maxchar(2),  $modifier),
+                        _octets(3, minchar(3),  maxchar(3),  $modifier),
+                        _octets(4, minchar(4),  $char[$i+1], $modifier);
                 }
             }
             elsif (length($char[$i-1]) == 2) {
                 if (length($char[$i+1]) == 3) {
                     push @charlist,
-                        _octets(2, $char[$i-1], &maxchar(2), $modifier),
-                        _octets(3, &minchar(3), $char[$i+1], $modifier);
+                        _octets(2, $char[$i-1], maxchar(2),  $modifier),
+                        _octets(3, minchar(3),  $char[$i+1], $modifier);
                 }
                 elsif (length($char[$i+1]) == 4) {
                     push @charlist,
-                        _octets(2, $char[$i-1], &maxchar(2), $modifier),
-                        _octets(3, &minchar(3), &maxchar(3), $modifier),
-                        _octets(4, &minchar(4), $char[$i+1], $modifier);
+                        _octets(2, $char[$i-1], maxchar(2),  $modifier),
+                        _octets(3, minchar(3),  maxchar(3),  $modifier),
+                        _octets(4, minchar(4),  $char[$i+1], $modifier);
                 }
             }
             elsif (length($char[$i-1]) == 3) {
                 if (length($char[$i+1]) == 4) {
                     push @charlist,
-                        _octets(3, $char[$i-1], &maxchar(3), $modifier),
-                        _octets(4, &minchar(4), $char[$i+1], $modifier);
+                        _octets(3, $char[$i-1], maxchar(3),  $modifier),
+                        _octets(4, minchar(4),  $char[$i+1], $modifier);
                 }
             }
             else {
@@ -1405,13 +1488,6 @@ sub _charlist {
         }
 
         # single character of single octet code
-
-        # \h \v
-        #
-        # P.114 Character Class Shortcuts
-        # in Chapter 7: In the World of Regular Expressions
-        # of ISBN 978-0-596-52010-6 Learning Perl, Fifth Edition
-
         elsif ($char[$i] =~ m/\A (?: \\h ) \z/oxms) {
             push @singleoctet, "\t", "\x20";
             $i += 1;
@@ -1425,7 +1501,7 @@ sub _charlist {
             $i += 1;
         }
 
-        # single character of multiple octet code
+        # single character of multiple-octet code
         else {
             push @charlist, $char[$i];
             $i += 1;
@@ -1552,12 +1628,12 @@ sub charlist_not_qr {
     if (scalar(@charlist) >= 1) {
         if (scalar(@singleoctet) >= 1) {
 
-            # any character other than multiple octet and single octet character class
+            # any character other than multiple-octet and single octet character class
             return '(?!' . join('|', @charlist) . ')(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE'. join('', @singleoctet) . '])';
         }
         else {
 
-            # any character other than multiple octet character class
+            # any character other than multiple-octet character class
             return '(?!' . join('|', @charlist) . ")(?:$your_char)";
         }
     }
@@ -1887,6 +1963,49 @@ sub _parse_path {
 }
 
 #
+# ${^PREMATCH}, $PREMATCH, $` the string preceding what was matched
+#
+sub Char::Eeucjp::PREMATCH {
+    if (defined($&)) {
+        if (defined($1) and (CORE::substr($&,-CORE::length($1),CORE::length($1)) eq $1)) {
+            return CORE::substr($&,0,CORE::length($&)-CORE::length($1));
+        }
+        else {
+            croak 'Use of "$`", $PREMATCH and ${^PREMATCH} need to /( capture all )/ in regexp';
+        }
+    }
+    else {
+        return '';
+    }
+    return $`;
+}
+
+#
+# ${^MATCH}, $MATCH, $& the string that matched
+#
+sub Char::Eeucjp::MATCH {
+    if (defined($&)) {
+        if (defined($1)) {
+            return $1;
+        }
+        else {
+            croak 'Use of "$&", $MATCH and ${^MATCH} need to /( capture all )/ in regexp';
+        }
+    }
+    else {
+        return '';
+    }
+    return $&;
+}
+
+#
+# ${^POSTMATCH}, $POSTMATCH, $' the string following what was matched
+#
+sub Char::Eeucjp::POSTMATCH {
+    return $';
+}
+
+#
 # EUC-JP character to order (with parameter)
 #
 sub Char::EUCJP::ord(;$) {
@@ -2112,7 +2231,12 @@ Because the Char/EUCJP.pm automatically uses this module, you need not use direc
 
 =head1 BUGS AND LIMITATIONS
 
-Please patches and report problems to author are welcome.
+I have tested and verified this software using the best of my ability.
+However, a software containing much regular expression is bound to contain
+some bugs. Thus, if you happen to find a bug that's in Char::EUCJP software and not
+your own program, you can try to reduce it to a minimal test case and then
+report it to the following author's address. If you have an idea that could
+make this a more useful tool, please let everyone share it.
 
 =head1 HISTORY
 
@@ -2169,6 +2293,8 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
   If the pattern contains parentheses, then the substring matched by each pair of
   parentheses is included in the resulting list, interspersed with the fields that
   are ordinarily returned.
+  Unlike Perl4, you cannot force the split into @_ by using ?? as the pattern
+  delimiters, it only returns the list value.
 
 =item Transliteration
 
