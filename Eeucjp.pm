@@ -8,11 +8,16 @@ package Eeucjp;
 ######################################################################
 
 use 5.00503;
-use strict qw(subs vars);
 
 BEGIN {
     if ($^X =~ m/ jperl /oxmsi) {
-        die "$0 need perl(not jperl) 5.00503 or later. (\$^X==$^X)";
+        die __FILE__, ": needs perl(not jperl) 5.00503 or later. (\$^X==$^X)";
+    }
+    if (ord('A') == 193) {
+        die __FILE__, ": is not US-ASCII script (may be EBCDIC or EBCDIK script).";
+    }
+    if (ord('A') != 0x41) {
+        die __FILE__, ": is not US-ASCII script (must be US-ASCII script).";
     }
 }
 
@@ -22,7 +27,7 @@ BEGIN {
 # (and so on)
 
 BEGIN { eval q{ use vars qw($VERSION) } }
-$VERSION = sprintf '%d.%02d', q$Revision: 0.80 $ =~ m/(\d+)/xmsg;
+$VERSION = sprintf '%d.%02d', q$Revision: 0.81 $ =~ m/(\d+)/xmsg;
 
 BEGIN {
     my $PERL5LIB = __FILE__;
@@ -77,6 +82,9 @@ BEGIN {
 
     sub gensym () {
         my $name = "GEN" . $genseq++;
+
+        # here, no strict qw(refs); if strict.pm exists
+
         my $ref = \*{$genpkg . $name};
         delete $$genpkg{$name};
         $ref;
@@ -103,8 +111,17 @@ BEGIN {
     }
 
     sub qualify_to_ref ($;$) {
-        no strict qw(refs);
+
+        # here, no strict qw(refs); if strict.pm exists
+
         return \*{ qualify $_[0], @_ > 1 ? $_[1] : caller };
+    }
+}
+
+# use strict; if strict.pm exists
+BEGIN {
+    if (eval {CORE::require strict}) {
+        strict::->import;
     }
 }
 
@@ -127,8 +144,6 @@ sub croak(@);
 sub cluck(@);
 sub confess(@);
 
-my $__FILE__ = __FILE__;
-
 my $your_char = q{\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[\x00-\xFF]};
 
 # regexp of character
@@ -144,166 +159,24 @@ my $is_eucjp_family    = 0;
 #
 # alias of encoding name
 #
-
 BEGIN { eval q{ use vars qw($encoding_alias) } }
+
+#
+# EUC-JP case conversion
+#
+my %lc = ();
+@lc{qw(A B C D E F G H I J K L M N O P Q R S T U V W X Y Z)} =
+    qw(a b c d e f g h i j k l m n o p q r s t u v w x y z);
+my %uc = ();
+@uc{qw(a b c d e f g h i j k l m n o p q r s t u v w x y z)} =
+    qw(A B C D E F G H I J K L M N O P Q R S T U V W X Y Z);
+my %fc = ();
+@fc{qw(A B C D E F G H I J K L M N O P Q R S T U V W X Y Z)} =
+    qw(a b c d e f g h i j k l m n o p q r s t u v w x y z);
 
 if (0) {
 }
 
-# US-ASCII
-elsif (__PACKAGE__ =~ m/ \b Eusascii \z/oxms) {
-    %range_tr = (
-        1 => [ [0x00..0xFF],
-             ],
-    );
-    $encoding_alias = qr/ \b (?: (?:us-?)?ascii ) \b /oxmsi;
-}
-
-# Latin-1
-elsif (__PACKAGE__ =~ m/ \b Elatin1 \z/oxms) {
-    %range_tr = (
-        1 => [ [0x00..0xFF],
-             ],
-    );
-    $encoding_alias = qr/ \b (?: iso[-_ ]?8859-1 | iec[- ]?8859-1 | latin-?1 ) \b /oxmsi;
-}
-
-# Latin-2
-elsif (__PACKAGE__ =~ m/ \b Elatin2 \z/oxms) {
-    %range_tr = (
-        1 => [ [0x00..0xFF],
-             ],
-    );
-    $encoding_alias = qr/ \b (?: iso[-_ ]?8859-2 | iec[- ]?8859-2 | latin-?2 ) \b /oxmsi;
-}
-
-# Latin-3
-elsif (__PACKAGE__ =~ m/ \b Elatin3 \z/oxms) {
-    %range_tr = (
-        1 => [ [0x00..0xFF],
-             ],
-    );
-    $encoding_alias = qr/ \b (?: iso[-_ ]?8859-3 | iec[- ]?8859-3 | latin-?3 ) \b /oxmsi;
-}
-
-# Latin-4
-elsif (__PACKAGE__ =~ m/ \b Elatin4 \z/oxms) {
-    %range_tr = (
-        1 => [ [0x00..0xFF],
-             ],
-    );
-    $encoding_alias = qr/ \b (?: iso[-_ ]?8859-4 | iec[- ]?8859-4 | latin-?4 ) \b /oxmsi;
-}
-
-# Cyrillic
-elsif (__PACKAGE__ =~ m/ \b Ecyrillic \z/oxms) {
-    %range_tr = (
-        1 => [ [0x00..0xFF],
-             ],
-    );
-    $encoding_alias = qr/ \b (?: iso[-_ ]?8859-5 | iec[- ]?8859-5 | cyrillic ) \b /oxmsi;
-}
-
-# KOI8-R
-elsif (__PACKAGE__ =~ m/ \b Ekoi8r \z/oxms) {
-    %range_tr = (
-        1 => [ [0x00..0xFF],
-             ],
-    );
-    $encoding_alias = qr/ \b (?: koi8-?r ) \b /oxmsi;
-}
-
-# KOI8-U
-elsif (__PACKAGE__ =~ m/ \b Ekoi8u \z/oxms) {
-    %range_tr = (
-        1 => [ [0x00..0xFF],
-             ],
-    );
-    $encoding_alias = qr/ \b (?: koi8-?u ) \b /oxmsi;
-}
-
-# Greek
-elsif (__PACKAGE__ =~ m/ \b Egreek \z/oxms) {
-    %range_tr = (
-        1 => [ [0x00..0xFF],
-             ],
-    );
-    $encoding_alias = qr/ \b (?: iso[-_ ]?8859-7 | iec[- ]?8859-7 | greek ) \b /oxmsi;
-}
-
-# Latin-5
-elsif (__PACKAGE__ =~ m/ \b Elatin5 \z/oxms) {
-    %range_tr = (
-        1 => [ [0x00..0xFF],
-             ],
-    );
-    $encoding_alias = qr/ \b (?: iso[-_ ]?8859-9 | iec[- ]?8859-9 | latin-?5 ) \b /oxmsi;
-}
-
-# Latin-6
-elsif (__PACKAGE__ =~ m/ \b Elatin6 \z/oxms) {
-    %range_tr = (
-        1 => [ [0x00..0xFF],
-             ],
-    );
-    $encoding_alias = qr/ \b (?: iso[-_ ]?8859-10 | iec[- ]?8859-10 | latin-?6 ) \b /oxmsi;
-}
-
-# Latin-7
-elsif (__PACKAGE__ =~ m/ \b Elatin7 \z/oxms) {
-    %range_tr = (
-        1 => [ [0x00..0xFF],
-             ],
-    );
-    $encoding_alias = qr/ \b (?: iso[-_ ]?8859-13 | iec[- ]?8859-13 | latin-?7 ) \b /oxmsi;
-}
-
-# Latin-8
-elsif (__PACKAGE__ =~ m/ \b Elatin8 \z/oxms) {
-    %range_tr = (
-        1 => [ [0x00..0xFF],
-             ],
-    );
-    $encoding_alias = qr/ \b (?: iso[-_ ]?8859-14 | iec[- ]?8859-14 | latin-?8 ) \b /oxmsi;
-}
-
-# Latin-9
-elsif (__PACKAGE__ =~ m/ \b Elatin9 \z/oxms) {
-    %range_tr = (
-        1 => [ [0x00..0xFF],
-             ],
-    );
-    $encoding_alias = qr/ \b (?: iso[-_ ]?8859-15 | iec[- ]?8859-15 | latin-?9 ) \b /oxmsi;
-}
-
-# Latin-10
-elsif (__PACKAGE__ =~ m/ \b Elatin10 \z/oxms) {
-    %range_tr = (
-        1 => [ [0x00..0xFF],
-             ],
-    );
-    $encoding_alias = qr/ \b (?: iso[-_ ]?8859-16 | iec[- ]?8859-16 | latin-?10 ) \b /oxmsi;
-}
-
-# Windows-1252
-elsif (__PACKAGE__ =~ m/ \b Ewindows1252 \z/oxms) {
-    %range_tr = (
-        1 => [ [0x00..0xFF],
-             ],
-    );
-    $encoding_alias = qr/ \b (?: windows-?1252 ) \b /oxmsi;
-}
-
-# Windows-1258
-elsif (__PACKAGE__ =~ m/ \b Ewindows1258 \z/oxms) {
-    %range_tr = (
-        1 => [ [0x00..0xFF],
-             ],
-    );
-    $encoding_alias = qr/ \b (?: windows-?1258 ) \b /oxmsi;
-}
-
-# EUC-JP
 elsif (__PACKAGE__ =~ m/ \b Eeucjp \z/oxms) {
     %range_tr = (
         1 => [ [0x00..0x8D,0x90..0xA0,0xFF],
@@ -318,43 +191,8 @@ elsif (__PACKAGE__ =~ m/ \b Eeucjp \z/oxms) {
     $encoding_alias = qr/ \b (?: euc.*jp | jp.*euc | ujis ) \b /oxmsi;
 }
 
-# UTF-2
-elsif (__PACKAGE__ =~ m/ \b Eutf2 \z/oxms) {
-    %range_tr = (
-        1 => [ [0x00..0x7F],
-             ],
-        2 => [ [0xC2..0xDF],[0x80..0xBF],
-             ],
-        3 => [ [0xE0..0xE0],[0xA0..0xBF],[0x80..0xBF],
-               [0xE1..0xEC],[0x80..0xBF],[0x80..0xBF],
-               [0xED..0xED],[0x80..0x9F],[0x80..0xBF],
-               [0xEE..0xEF],[0x80..0xBF],[0x80..0xBF],
-             ],
-        4 => [ [0xF0..0xF0],[0x90..0xBF],[0x80..0xBF],[0x80..0xBF],
-               [0xF1..0xF3],[0x80..0xBF],[0x80..0xBF],[0x80..0xBF],
-               [0xF4..0xF4],[0x80..0x8F],[0x80..0xBF],[0x80..0xBF],
-             ],
-    );
-    $encoding_alias = qr/ \b (?: utf-8 | utf-8-strict | utf-?2 ) \b /oxmsi;
-}
-
-# Old UTF-8
-elsif (__PACKAGE__ =~ m/ \b Eoldutf8 \z/oxms) {
-    %range_tr = (
-        1 => [ [0x00..0x7F],
-             ],
-        2 => [ [0xC0..0xDF],[0x80..0xBF],
-             ],
-        3 => [ [0xE0..0xEF],[0x80..0xBF],[0x80..0xBF],
-             ],
-        4 => [ [0xF0..0xF4],[0x80..0xBF],[0x80..0xBF],[0x80..0xBF],
-             ],
-    );
-    $encoding_alias = qr/ \b (?: utf8 | cesu-?8 | modified[ ]?utf-?8 | old[ ]?utf-?8 ) \b /oxmsi;
-}
-
 else {
-    croak "$0 don't know my package name '" . __PACKAGE__ . "'";
+    croak "Don't know my package name '@{[__PACKAGE__]}'";
 }
 
 #
@@ -367,6 +205,17 @@ sub Eeucjp::tr($$$$;$);
 sub Eeucjp::chop(@);
 sub Eeucjp::index($$;$);
 sub Eeucjp::rindex($$;$);
+sub Eeucjp::lcfirst(@);
+sub Eeucjp::lcfirst_();
+sub Eeucjp::lc(@);
+sub Eeucjp::lc_();
+sub Eeucjp::ucfirst(@);
+sub Eeucjp::ucfirst_();
+sub Eeucjp::uc(@);
+sub Eeucjp::uc_();
+sub Eeucjp::fc(@);
+sub Eeucjp::fc_();
+sub Eeucjp::ignorecase(@);
 sub Eeucjp::classic_character_class($);
 sub Eeucjp::capture($);
 sub Eeucjp::chr(;$);
@@ -422,7 +271,7 @@ use vars qw(
 @{Eeucjp::eS}          = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x09\x0A\x0C\x0D\x20])};
 @{Eeucjp::eW}          = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE0-9A-Z_a-z])};
 @{Eeucjp::eH}          = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x09\x20])};
-@{Eeucjp::eV}          = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x0C\x0A\x0D])};
+@{Eeucjp::eV}          = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x0A\x0B\x0C\x0D])};
 @{Eeucjp::eR}          = qr{(?:\x0D\x0A|[\x0A\x0D])};
 @{Eeucjp::eN}          = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x0A])};
 @{Eeucjp::not_alnum}   = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x30-\x39\x41-\x5A\x61-\x7A])};
@@ -504,7 +353,7 @@ sub Eeucjp::split(;$$$) {
 
         # count of substrings in scalar context
         else {
-            carp "$0: Use of implicit split to \@_ is deprecated" if $^W;
+            carp "Use of implicit split to \@_ is deprecated" if $^W;
             @_ = @split;
             return scalar @_;
         }
@@ -534,8 +383,8 @@ sub Eeucjp::split(;$$$) {
                 # (and so on)
 
                 local $@;
-                for (my $digit=1; eval "defined(\$$digit)"; $digit++) {
-                    push @split, eval '$' . $digit;
+                for (my $digit=1; $digit <= 1; $digit++) {
+                    push @split, eval('$' . $digit);
                 }
             }
         }
@@ -546,19 +395,21 @@ sub Eeucjp::split(;$$$) {
         # (and so on)
 
         elsif ('' =~ m/ \A $pattern \z /xms) {
+            my $last_subexpression_offsets = _last_subexpression_offsets($pattern);
             while ($string =~ s/\A((?:$q_char)+?)$pattern//m) {
                 local $@;
-                for (my $digit=1; eval "defined(\$$digit)"; $digit++) {
-                    push @split, eval '$' . $digit;
+                for (my $digit=1; $digit <= ($last_subexpression_offsets + 1); $digit++) {
+                    push @split, eval('$' . $digit);
                 }
             }
         }
 
         else {
+            my $last_subexpression_offsets = _last_subexpression_offsets($pattern);
             while ($string =~ s/\A((?:$q_char)*?)$pattern//m) {
                 local $@;
-                for (my $digit=1; eval "defined(\$$digit)"; $digit++) {
-                    push @split, eval '$' . $digit;
+                for (my $digit=1; $digit <= ($last_subexpression_offsets + 1); $digit++) {
+                    push @split, eval('$' . $digit);
                 }
             }
         }
@@ -570,28 +421,30 @@ sub Eeucjp::split(;$$$) {
             while ((--$limit > 0) and (CORE::length($string) > 0)) {
                 if ($string =~ s/\A((?:$q_char)*?)\s+//m) {
                     local $@;
-                    for (my $digit=1; eval "defined(\$$digit)"; $digit++) {
-                        push @split, eval '$' . $digit;
+                    for (my $digit=1; $digit <= 1; $digit++) {
+                        push @split, eval('$' . $digit);
                     }
                 }
             }
         }
         elsif ('' =~ m/ \A $pattern \z /xms) {
+            my $last_subexpression_offsets = _last_subexpression_offsets($pattern);
             while ((--$limit > 0) and (CORE::length($string) > 0)) {
                 if ($string =~ s/\A((?:$q_char)+?)$pattern//m) {
                     local $@;
-                    for (my $digit=1; eval "defined(\$$digit)"; $digit++) {
-                        push @split, eval '$' . $digit;
+                    for (my $digit=1; $digit <= ($last_subexpression_offsets + 1); $digit++) {
+                        push @split, eval('$' . $digit);
                     }
                 }
             }
         }
         else {
+            my $last_subexpression_offsets = _last_subexpression_offsets($pattern);
             while ((--$limit > 0) and (CORE::length($string) > 0)) {
                 if ($string =~ s/\A((?:$q_char)*?)$pattern//m) {
                     local $@;
-                    for (my $digit=1; eval "defined(\$$digit)"; $digit++) {
-                        push @split, eval '$' . $digit;
+                    for (my $digit=1; $digit <= ($last_subexpression_offsets + 1); $digit++) {
+                        push @split, eval('$' . $digit);
                     }
                 }
             }
@@ -614,10 +467,50 @@ sub Eeucjp::split(;$$$) {
 
     # count of substrings in scalar context
     else {
-        carp "$0: Use of implicit split to \@_ is deprecated" if $^W;
+        carp "Use of implicit split to \@_ is deprecated" if $^W;
         @_ = @split;
         return scalar @_;
     }
+}
+
+#
+# get last subexpression offsets
+#
+sub _last_subexpression_offsets {
+    my $pattern = $_[0];
+
+    # remove comment
+    $pattern =~ s/\(\?\# .*? \)//oxmsg;
+
+    my $modifier = '';
+    if ($pattern =~ m/\(\?\^? ([\-A-Za-z]+) :/oxms) {
+        $modifier = $1;
+        $modifier =~ s/-[A-Za-z]*//;
+    }
+
+    # with /x modifier
+    my @char = ();
+    if ($modifier =~ m/x/oxms) {
+        @char = $pattern =~ m{\G(
+            \\ (?:$q_char)                  |
+            \# (?:$q_char)*? $              |
+            \[ (?: \\\] | (?:$q_char))+? \] |
+            \(\?                            |
+            (?:$q_char)
+        )}oxmsg;
+    }
+
+    # without /x modifier
+    else {
+        @char = $pattern =~ m{\G(
+            \\ (?:$q_char)                  |
+            \[ (?: \\\] | (?:$q_char))+? \] |
+            \(\?                            |
+            (?:$q_char)
+        )}oxmsg;
+    }
+
+    return scalar grep { $_ eq '(' } @char;
 }
 
 #
@@ -632,7 +525,7 @@ sub Eeucjp::tr($$$$;$) {
 
     if ($modifier =~ m/r/oxms) {
         if ($bind_operator =~ m/ !~ /oxms) {
-            croak "$0: Using !~ with tr///r doesn't make sense";
+            croak "Using !~ with tr///r doesn't make sense";
         }
     }
 
@@ -782,6 +675,134 @@ sub Eeucjp::rindex($$;$) {
 }
 
 #
+# EUC-JP lower case first with parameter
+#
+sub Eeucjp::lcfirst(@) {
+    if (@_) {
+        my $s = shift @_;
+        if (@_ and wantarray) {
+            return Eeucjp::lc(CORE::substr($s,0,1)) . CORE::substr($s,1), @_;
+        }
+        else {
+            return Eeucjp::lc(CORE::substr($s,0,1)) . CORE::substr($s,1);
+        }
+    }
+    else {
+        return Eeucjp::lc(CORE::substr($_,0,1)) . CORE::substr($_,1);
+    }
+}
+
+#
+# EUC-JP lower case first without parameter
+#
+sub Eeucjp::lcfirst_() {
+    return Eeucjp::lc(CORE::substr($_,0,1)) . CORE::substr($_,1);
+}
+
+#
+# EUC-JP lower case with parameter
+#
+sub Eeucjp::lc(@) {
+    if (@_) {
+        my $s = shift @_;
+        if (@_ and wantarray) {
+            return join('', map {defined($lc{$_}) ? $lc{$_} : $_} ($s =~ m/\G ($q_char) /oxmsg)), @_;
+        }
+        else {
+            return join('', map {defined($lc{$_}) ? $lc{$_} : $_} ($s =~ m/\G ($q_char) /oxmsg));
+        }
+    }
+    else {
+        return Eeucjp::lc_();
+    }
+}
+
+#
+# EUC-JP lower case without parameter
+#
+sub Eeucjp::lc_() {
+    my $s = $_;
+    return join '', map {defined($lc{$_}) ? $lc{$_} : $_} ($s =~ m/\G ($q_char) /oxmsg);
+}
+
+#
+# EUC-JP upper case first with parameter
+#
+sub Eeucjp::ucfirst(@) {
+    if (@_) {
+        my $s = shift @_;
+        if (@_ and wantarray) {
+            return Eeucjp::uc(CORE::substr($s,0,1)) . CORE::substr($s,1), @_;
+        }
+        else {
+            return Eeucjp::uc(CORE::substr($s,0,1)) . CORE::substr($s,1);
+        }
+    }
+    else {
+        return Eeucjp::uc(CORE::substr($_,0,1)) . CORE::substr($_,1);
+    }
+}
+
+#
+# EUC-JP upper case first without parameter
+#
+sub Eeucjp::ucfirst_() {
+    return Eeucjp::uc(CORE::substr($_,0,1)) . CORE::substr($_,1);
+}
+
+#
+# EUC-JP upper case with parameter
+#
+sub Eeucjp::uc(@) {
+    if (@_) {
+        my $s = shift @_;
+        if (@_ and wantarray) {
+            return join('', map {defined($uc{$_}) ? $uc{$_} : $_} ($s =~ m/\G ($q_char) /oxmsg)), @_;
+        }
+        else {
+            return join('', map {defined($uc{$_}) ? $uc{$_} : $_} ($s =~ m/\G ($q_char) /oxmsg));
+        }
+    }
+    else {
+        return Eeucjp::uc_();
+    }
+}
+
+#
+# EUC-JP upper case without parameter
+#
+sub Eeucjp::uc_() {
+    my $s = $_;
+    return join '', map {defined($uc{$_}) ? $uc{$_} : $_} ($s =~ m/\G ($q_char) /oxmsg);
+}
+
+#
+# EUC-JP fold case with parameter
+#
+sub Eeucjp::fc(@) {
+    if (@_) {
+        my $s = shift @_;
+        if (@_ and wantarray) {
+            return join('', map {defined($fc{$_}) ? $fc{$_} : $_} ($s =~ m/\G ($q_char) /oxmsg)), @_;
+        }
+        else {
+            return join('', map {defined($fc{$_}) ? $fc{$_} : $_} ($s =~ m/\G ($q_char) /oxmsg));
+        }
+    }
+    else {
+        return Eeucjp::fc_();
+    }
+}
+
+#
+# EUC-JP fold case lower case without parameter
+#
+sub Eeucjp::fc_() {
+    my $s = $_;
+    return join '', map {defined($fc{$_}) ? $fc{$_} : $_} ($s =~ m/\G ($q_char) /oxmsg);
+}
+
+#
 # EUC-JP regexp capture
 #
 {
@@ -798,17 +819,15 @@ sub Eeucjp::rindex($$;$) {
         return $_[0];
     }
 
-    # EUC-JP regexp mark last m// or qr// matched
+    # EUC-JP mark last regexp matched
     sub Eeucjp::matched() {
         $last_s_matched = 0;
     }
 
-    # EUC-JP regexp mark last s/// or qr matched
+    # EUC-JP mark last s/// matched
     sub Eeucjp::s_matched() {
         $last_s_matched = 1;
     }
-
-    # which matched of m// or s/// at last
 
     # P.854 31.17. use re
     # in Chapter 31. Pragmatic Modules
@@ -819,6 +838,149 @@ sub Eeucjp::rindex($$;$) {
     # of ISBN 978-0-596-00492-7 Programming Perl 4th Edition.
 
     @Eeucjp::matched = (qr/(?{Eeucjp::matched})/);
+}
+
+#
+# EUC-JP regexp ignore case modifier
+#
+sub Eeucjp::ignorecase(@) {
+
+    my @string = @_;
+    my $metachar = qr/[\@\\|[\]{]/oxms;
+
+    # ignore case of $scalar or @array
+    for my $string (@string) {
+
+        # split regexp
+        my @char = $string =~ m{\G(
+            \[\^ |
+                \\? (?:$q_char)
+        )}oxmsg;
+
+        # unescape character
+        for (my $i=0; $i <= $#char; $i++) {
+            next if not defined $char[$i];
+
+            # open character class [...]
+            if ($char[$i] eq '[') {
+                my $left = $i;
+
+                # [] make die "unmatched [] in regexp ..."
+
+                if ($char[$i+1] eq ']') {
+                    $i++;
+                }
+
+                while (1) {
+                    if (++$i > $#char) {
+                        croak "Unmatched [] in regexp";
+                    }
+                    if ($char[$i] eq ']') {
+                        my $right = $i;
+                        my @charlist = charlist_qr(@char[$left+1..$right-1], 'i');
+
+                        # escape character
+                        for my $char (@charlist) {
+
+                            # do not use quotemeta here
+                            if ($char =~ m/\A ([\x80-\xFF].*) ($metachar) \z/oxms) {
+                                $char = $1 . '\\' . $2;
+                            }
+                            elsif ($char =~ m/\A [.|)] \z/oxms) {
+                                $char = $1 . '\\' . $char;
+                            }
+                        }
+
+                        # [...]
+                        splice @char, $left, $right-$left+1, '(?:' . join('|', @charlist) . ')';
+
+                        $i = $left;
+                        last;
+                    }
+                }
+            }
+
+            # open character class [^...]
+            elsif ($char[$i] eq '[^') {
+                my $left = $i;
+
+                # [^] make die "unmatched [] in regexp ..."
+
+                if ($char[$i+1] eq ']') {
+                    $i++;
+                }
+
+                while (1) {
+                    if (++$i > $#char) {
+                        croak "Unmatched [] in regexp";
+                    }
+                    if ($char[$i] eq ']') {
+                        my $right = $i;
+                        my @charlist = charlist_not_qr(@char[$left+1..$right-1], 'i');
+
+                        # escape character
+                        for my $char (@charlist) {
+
+                            # do not use quotemeta here
+                            if ($char =~ m/\A ([\x80-\xFF].*) ($metachar) \z/oxms) {
+                                $char = $1 . '\\' . $2;
+                            }
+                            elsif ($char =~ m/\A [.|)] \z/oxms) {
+                                $char = '\\' . $char;
+                            }
+                        }
+
+                        # [^...]
+                        splice @char, $left, $right-$left+1, '(?!' . join('|', @charlist) . ")(?:$your_char)";
+
+                        $i = $left;
+                        last;
+                    }
+                }
+            }
+
+            # rewrite classic character class or escape character
+            elsif (my $char = classic_character_class($char[$i])) {
+                $char[$i] = $char;
+            }
+
+            # /i modifier
+            elsif ($char[$i] =~ m/\A [\x00-\xFF] \z/oxms) {
+                my $uc = Eeucjp::uc($char[$i]);
+                my $fc = Eeucjp::fc($char[$i]);
+                if ($uc ne $fc) {
+                    if (CORE::length($fc) == 1) {
+                        $char[$i] = '['   . $uc       . $fc . ']';
+                    }
+                    else {
+                        $char[$i] = '(?:' . $uc . '|' . $fc . ')';
+                    }
+                }
+            }
+        }
+
+        # characterize
+        for (my $i=0; $i <= $#char; $i++) {
+            next if not defined $char[$i];
+
+            # escape last octet of multiple-octet
+            if ($char[$i] =~ m/\A ([\x80-\xFF].*) ($metachar) \z/oxms) {
+                $char[$i] = $1 . '\\' . $2;
+            }
+
+            # quote character before ? + * {
+            elsif (($i >= 1) and ($char[$i] =~ m/\A [\?\+\*\{] \z/oxms)) {
+                if ($char[$i-1] !~ m/\A [\x00-\xFF] \z/oxms) {
+                    $char[$i-1] = '(?:' . $char[$i-1] . ')';
+                }
+            }
+        }
+
+        $string = join '', @char;
+    }
+
+    # make regexp string
+    return @string;
 }
 
 #
@@ -844,6 +1006,17 @@ sub classic_character_class($) {
         # in Chapter 7: In the World of Regular Expressions
         # of ISBN 978-0-596-52010-6 Learning Perl, Fifth Edition
 
+        # P.357 13.2.3 Whitespace
+        # in Chapter 13: perlrecharclass: Perl Regular Expression Character Classes
+        # of ISBN-13: 978-1-906966-02-7 The Perl Language Reference Manual (for Perl version 5.12.1)
+        #
+        # 0x00009   CHARACTER TABULATION  h s
+        # 0x0000a         LINE FEED (LF)   vs
+        # 0x0000b        LINE TABULATION   v
+        # 0x0000c         FORM FEED (FF)   vs
+        # 0x0000d   CARRIAGE RETURN (CR)   vs
+        # 0x00020                  SPACE  h s
+
         # P.196 Table 5-9. Alphanumeric regex metasymbols
         # in Chapter 5. Pattern Matching
         # of ISBN 978-0-596-00492-7 Programming Perl 4th Edition.
@@ -853,7 +1026,7 @@ sub classic_character_class($) {
         '\H' => '@{Eeucjp::eH}',
         '\V' => '@{Eeucjp::eV}',
         '\h' => '[\x09\x20]',
-        '\v' => '[\x0C\x0A\x0D]',
+        '\v' => '[\x0A\x0B\x0C\x0D]',
         '\R' => '@{Eeucjp::eR}',
 
         # \N
@@ -866,9 +1039,9 @@ sub classic_character_class($) {
 
         # \b \B
 
-        # P.131 Word boundaries: \b, \B, \<, \>, ...
-        # in Chapter 3: Overview of Regular Expression Features and Flavors
-        # of ISBN 0-596-00289-0 Mastering Regular Expressions, Second edition
+        # P.180 Boundaries: The \b and \B Assertions
+        # in Chapter 5: Pattern Matching
+        # of ISBN 0-596-00027-8 Programming Perl Third Edition.
 
         # P.219 Boundaries: The \b and \B Assertions
         # in Chapter 5: Pattern Matching
@@ -1049,7 +1222,7 @@ sub _charlist_tr {
 
         # range error
         if ((length($char[$i-1]) > length($char[$i+1])) or ($char[$i-1] gt $char[$i+1])) {
-            croak "$0: invalid [] range \"\\x" . unpack('H*',$char[$i-1]) . '-\\x' . unpack('H*',$char[$i+1]) . '" in regexp';
+            croak "Invalid [] range \"\\x" . unpack('H*',$char[$i-1]) . '-\\x' . unpack('H*',$char[$i+1]) . '" in regexp';
         }
 
         # range of multiple-octet code
@@ -1329,7 +1502,7 @@ sub _charlist {
                 '\H' => '@{Eeucjp::eH}',
                 '\V' => '@{Eeucjp::eV}',
                 '\h' => '[\x09\x20]',
-                '\v' => '[\x0C\x0A\x0D]',
+                '\v' => '[\x0A\x0B\x0C\x0D]',
                 '\R' => '@{Eeucjp::eR}',
 
             }->{$1};
@@ -1399,7 +1572,7 @@ sub _charlist {
 
             # range error
             if ((length($char[$i-1]) > length($char[$i+1])) or ($char[$i-1] gt $char[$i+1])) {
-                croak "$0: invalid [] range \"\\x" . unpack('H*',$char[$i-1]) . '-\\x' . unpack('H*',$char[$i+1]) . '" in regexp';
+                croak "Invalid [] range \"\\x" . unpack('H*',$char[$i-1]) . '-\\x' . unpack('H*',$char[$i+1]) . '" in regexp';
             }
 
             # range of single octet code and not ignore case
@@ -1463,7 +1636,7 @@ sub _charlist {
                 }
             }
             else {
-                croak "$0: invalid [] range \"\\x" . unpack('H*',$char[$i-1]) . '-\\x' . unpack('H*',$char[$i+1]) . '" in regexp';
+                croak "Invalid [] range \"\\x" . unpack('H*',$char[$i-1]) . '-\\x' . unpack('H*',$char[$i+1]) . '" in regexp';
             }
 
             $i += 2;
@@ -1472,10 +1645,16 @@ sub _charlist {
         # /i modifier
         elsif ($char[$i] =~ m/\A [\x00-\xFF] \z/oxms) {
             if ($modifier =~ m/i/oxms) {
-                my $uc = uc($char[$i]);
-                my $lc = lc($char[$i]);
-                if ($uc ne $lc) {
-                    push @singleoctet, $uc, $lc;
+                my $uc = Eeucjp::uc($char[$i]);
+                my $fc = Eeucjp::fc($char[$i]);
+                if ($uc ne $fc) {
+                    if (CORE::length($fc) == 1) {
+                        push @singleoctet, $uc, $fc;
+                    }
+                    else {
+                        push @singleoctet, $uc;
+                        push @charlist,    $fc;
+                    }
                 }
                 else {
                     push @singleoctet, $char[$i];
@@ -1493,7 +1672,7 @@ sub _charlist {
             $i += 1;
         }
         elsif ($char[$i] =~ m/\A (?: \\v ) \z/oxms) {
-            push @singleoctet, "\f","\n","\r";
+            push @singleoctet, "\x0A", "\x0B", "\x0C", "\x0D";
             $i += 1;
         }
         elsif ($char[$i] =~ m/\A (?: \\d | \\s | \\w ) \z/oxms) {
@@ -1696,7 +1875,18 @@ sub Eeucjp::chr_() {
 #
 sub Eeucjp::glob($) {
 
-    return _dosglob(@_);
+    if (wantarray) {
+        my @glob = _dosglob(@_);
+        for my $glob (@glob) {
+            $glob =~ s{ \A (?:\./)+ }{}oxms;
+        }
+        return @glob;
+    }
+    else {
+        my $glob = _dosglob(@_);
+        $glob =~ s{ \A (?:\./)+ }{}oxms;
+        return $glob;
+    }
 }
 
 #
@@ -1704,7 +1894,18 @@ sub Eeucjp::glob($) {
 #
 sub Eeucjp::glob_() {
 
-    return _dosglob();
+    if (wantarray) {
+        my @glob = _dosglob();
+        for my $glob (@glob) {
+            $glob =~ s{ \A (?:\./)+ }{}oxms;
+        }
+        return @glob;
+    }
+    else {
+        my $glob = _dosglob();
+        $glob =~ s{ \A (?:\./)+ }{}oxms;
+        return $glob;
+    }
 }
 
 #
@@ -1870,14 +2071,14 @@ OUTER:
                 $pattern .= "(?:$your_char)?",  # DOS style
 #               $pattern .= "(?:$your_char)",   # UNIX style
             }
-            elsif ((my $uc = uc($char)) ne $char) {
-                $pattern .= $uc;
+            elsif ((my $fc = Eeucjp::fc($char)) ne $char) {
+                $pattern .= $fc;
             }
             else {
                 $pattern .= quotemeta $char;
             }
         }
-        my $matchsub = sub { uc($_[0]) =~ m{\A $pattern \z}xms };
+        my $matchsub = sub { Eeucjp::fc($_[0]) =~ m{\A $pattern \z}xms };
 
 #       if ($@) {
 #           print STDERR "$0: $@\n";
@@ -2216,6 +2417,17 @@ Eeucjp - Run-time routines for EUCJP.pm
     Eeucjp::chop(...);
     Eeucjp::index(...);
     Eeucjp::rindex(...);
+    Eeucjp::lc(...);
+    Eeucjp::lc_;
+    Eeucjp::lcfirst(...);
+    Eeucjp::lcfirst_;
+    Eeucjp::uc(...);
+    Eeucjp::uc_;
+    Eeucjp::ucfirst(...);
+    Eeucjp::ucfirst_;
+    Eeucjp::fc(...);
+    Eeucjp::fc_;
+    Eeucjp::ignorecase(...);
     Eeucjp::capture(...);
     Eeucjp::chr(...);
     Eeucjp::chr_;
@@ -2275,31 +2487,150 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
   @split = Eeucjp::split();
   @split = Eeucjp::split;
 
-  Scans a EUC-JP $string for delimiters that match pattern and splits the EUC-JP
-  $string into a list of substrings, returning the resulting list value in list
-  context, or the count of substrings in scalar context. The delimiters are
-  determined by repeated pattern matching, using the regular expression given in
-  pattern, so the delimiters may be of any size and need not be the same EUC-JP
-  $string on every match. If the pattern doesn't match at all, Eeucjp::split returns
-  the original EUC-JP $string as a single substring. If it matches once, you get
-  two substrings, and so on.
-  If $limit is specified and is not negative, the function splits into no more than
-  that many fields. If $limit is negative, it is treated as if an arbitrarily large
-  $limit has been specified. If $limit is omitted, trailing null fields are stripped
-  from the result (which potential users of pop would do well to remember).
-  If EUC-JP $string is omitted, the function splits the $_ EUC-JP string.
-  If $patten is also omitted, the function splits on whitespace, /\s+/, after
+  This function scans a string given by $string for separators, and splits the
+  string into a list of substring, returning the resulting list value in list
+  context or the count of substring in scalar context. Scalar context also causes
+  split to write its result to @_, but this usage is deprecated. The separators
+  are determined by repeated pattern matching, using the regular expression given
+  in /pattern/, so the separators may be of any size and need not be the same
+  string on every match. (The separators are not ordinarily returned; exceptions
+  are discussed later in this section.) If the /pattern/ doesn't match the string
+  at all, Eeucjp::split returns the original string as a single substring, If it
+  matches once, you get two substrings, and so on. You may supply regular
+  expression modifiers to the /pattern/, like /pattern/i, /pattern/x, etc. The
+  //m modifier is assumed when you split on the pattern /^/.
+
+  If $limit is specified and positive, the function splits into no more than that
+  many fields (though it may split into fewer if it runs out of separators). If
+  $limit is negative, it is treated as if an arbitrarily large $limit has been
+  specified If $limit is omitted or zero, trailing null fields are stripped from
+  the result (which potential users of pop would do wel to remember). If $string
+  is omitted, the function splits the $_ string. If /pattern/ is also omitted or
+  is the literal space, " ", the function split on whitespace, /\s+/, after
   skipping any leading whitespace.
-  If the pattern contains parentheses, then the substring matched by each pair of
-  parentheses is included in the resulting list, interspersed with the fields that
-  are ordinarily returned.
-  Unlike Perl4, you cannot force the split into @_ by using ?? as the pattern
-  delimiters, it only returns the list value.
+
+  A /pattern/ of /^/ is secretly treated if it it were /^/m, since it isn't much
+  use otherwise.
+
+  String of any length can be split:
+
+  @chars  = Eeucjp::split(//,  $word);
+  @fields = Eeucjp::split(/:/, $line);
+  @words  = Eeucjp::split(" ", $paragraph);
+  @lines  = Eeucjp::split(/^/, $buffer);
+
+  A pattern capable of matching either the null string or something longer than
+  the null string (for instance, a pattern consisting of any single character
+  modified by a * or ?) will split the value of $string into separate characters
+  wherever it matches the null string between characters; nonnull matches will
+  skip over the matched separator characters in the usual fashion. (In other words,
+  a pattern won't match in one spot more than once, even if it matched with a zero
+  width.) For example:
+
+  print join(":" => Eeucjp::split(/ */, "hi there"));
+
+  produces the output "h:i:t:h:e:r:e". The space disappers because it matches
+  as part of the separator. As a trivial case, the null pattern // simply splits
+  into separate characters, and spaces do not disappear. (For normal pattern
+  matches, a // pattern would repeat the last successfully matched pattern, but
+  Eeucjp::split's pattern is exempt from that wrinkle.)
+
+  The $limit parameter splits only part of a string:
+
+  my ($login, $passwd, $remainder) = Eeucjp::split(/:/, $_, 3);
+
+  We encourage you to split to lists of names like this to make your code
+  self-documenting. (For purposes of error checking, note that $remainder would
+  be undefined if there were fewer than three fields.) When assigning to a list,
+  if $limit is omitted, Perl supplies a $limit one larger than the number of
+  variables in the list, to avoid unneccessary work. For the split above, $limit
+  would have been 4 by default, and $remainder would have received only the third
+  field, not all the rest of the fields. In time-critical applications, it behooves
+  you not to split into more fields than you really need. (The trouble with
+  powerful languages it that they let you be powerfully stupid at times.)
+
+  We said earlier that the separators are not returned, but if the /pattern/
+  contains parentheses, then the substring matched by each pair of parentheses is
+  included in the resulting list, interspersed with the fields that are ordinarily
+  returned. Here's a simple example:
+
+  Eeucjp::split(/([-,])/, "1-10,20");
+
+  which produces the list value:
+
+  (1, "-", 10, ",", 20)
+
+  With more parentheses, a field is returned for each pair, even if some pairs
+  don't match, in which case undefined values are returned in those positions. So
+  if you say:
+
+  Eeucjp::split(/(-)|(,)/, "1-10,20");
+
+  you get the value:
+
+  (1, "-", undef, 10, undef, ",", 20)
+
+  The /pattern/ argument may be replaced with an expression to specify patterns
+  that vary at runtime. As with ordinary patterns, to do run-time compilation only
+  once, use /$variable/o.
+
+  As a special case, if the expression is a single space (" "), the function
+  splits on whitespace just as Eeucjp::split with no arguments does. Thus,
+  Eeucjp::split(" ") can be used to emulate awk's default behavior. In contrast,
+  Eeucjp::split(/ /) will give you as many null initial fields as there are
+  leading spaces. (Other than this special case, if you supply a string instead
+  of a regular expression, it'll be interpreted as a regular expression anyway.)
+  You can use this property to remove leading and trailing whitespace from a
+  string and to collapse intervaning stretches of whitespace into a single
+  space:
+
+  $string = join(" ", Eeucjp::split(" ", $string));
+
+  The following example splits an RFC822 message header into a hash containing
+  $head{'Date'}, $head{'Subject'}, and so on. It uses the trick of assigning a
+  list of pairs to a hash, because separators altinate with separated fields, It
+  users parentheses to return part of each separator as part of the returned list
+  value. Since the split pattern is guaranteed to return things in pairs by virtue
+  of containing one set of parentheses, the hash assignment is guaranteed to
+  receive a list consisting of key/value pairs, where each key is the name of a
+  header field. (Unfortunately, this technique loses information for multiple lines
+  with the same key field, such as Received-By lines. Ah well)
+
+  $header =~ s/\n\s+/ /g; # Merge continuation lines.
+  %head = ("FRONTSTUFF", Eeucjp::split(/^(\S*?):\s*/m, $header));
+
+  The following example processes the entries in a Unix passwd(5) file. You could
+  leave out the chomp, in which case $shell would have a newline on the end of it.
+
+  open(PASSWD, "/etc/passwd");
+  while (<PASSWD>) {
+      chomp; # remove trailing newline.
+      ($login, $passwd, $uid, $gid, $gcos, $home, $shell) =
+          Eeucjp::split(/:/);
+      ...
+  }
+
+  Here's how process each word of each line of each file of input to create a
+  word-frequency hash.
+
+  while (<>) {
+      for my $word (Eeucjp::split()) {
+          $count{$word}++;
+      }
+  }
+
+  The inverse of Eeucjp::split is join, except that join can only join with the
+  same separator between all fields. To break apart a string with fixed-position
+  fields, use unpack.
 
 =item Transliteration
 
   $tr = Eeucjp::tr($variable,$bind_operator,$searchlist,$replacementlist,$modifier);
   $tr = Eeucjp::tr($variable,$bind_operator,$searchlist,$replacementlist);
+
+  This is the transliteration (sometimes erroneously called translation) operator,
+  which is like the y/// operator in the Unix sed program, only better, in
+  everybody's humble opinion.
 
   This function scans a EUC-JP string character by character and replaces all
   occurrences of the characters found in $searchlist with the corresponding character
@@ -2307,13 +2638,18 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
   If no EUC-JP string is specified via =~ operator, the $_ variable is translated.
   $modifier are:
 
-  ------------------------------------------------------
+  ---------------------------------------------------------------------------
   Modifier   Meaning
-  ------------------------------------------------------
-  c          Complement $searchlist
-  d          Delete found but unreplaced characters
-  s          Squash duplicate replaced characters
-  ------------------------------------------------------
+  ---------------------------------------------------------------------------
+  c          Complement $searchlist.
+  d          Delete found but unreplaced characters.
+  s          Squash duplicate replaced characters.
+  r          Return transliteration and leave the original string untouched.
+  ---------------------------------------------------------------------------
+
+  To use with a read-only value without raising an exception, use the /r modifier.
+
+  print Eeucjp::tr('bookkeeper','=~','boep','peob','r'); # prints 'peekkoobor'
 
 =item Chop string
 
@@ -2321,31 +2657,203 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
   $chop = Eeucjp::chop();
   $chop = Eeucjp::chop;
 
-  Chops off the last character of a EUC-JP string contained in the variable (or
-  EUC-JP strings in each element of a @list) and returns the character chopped.
-  The Eeucjp::chop operator is used primarily to remove the newline from the end of
-  an input record but is more efficient than s/\n$//. If no argument is given, the
-  function chops the $_ variable.
+  This fubction chops off the last character of a string variable and returns the
+  character chopped. The Eeucjp::chop function is used primary to remove the newline
+  from the end of an input recoed, and it is more efficient than using a
+  substitution. If that's all you're doing, then it would be safer to use chomp,
+  since Eeucjp::chop always shortens the string no matter what's there, and chomp
+  is more selective. If no argument is given, the function chops the $_ variable.
+
+  You cannot Eeucjp::chop a literal, only a variable. If you Eeucjp::chop a list of
+  variables, each string in the list is chopped:
+
+  @lines = `cat myfile`;
+  Eeucjp::chop(@lines);
+
+  You can Eeucjp::chop anything that is an lvalue, including an assignment:
+
+  Eeucjp::chop($cwd = `pwd`);
+  Eeucjp::chop($answer = <STDIN>);
+
+  This is different from:
+
+  $answer = Eeucjp::chop($tmp = <STDIN>); # WRONG
+
+  which puts a newline into $answer because Eeucjp::chop returns the character
+  chopped, not the remaining string (which is in $tmp). One way to get the result
+  intended here is with substr:
+
+  $answer = substr <STDIN>, 0, -1;
+
+  But this is more commonly written as:
+
+  Eeucjp::chop($answer = <STDIN>);
+
+  In the most general case, Eeucjp::chop can be expressed using substr:
+
+  $last_code = Eeucjp::chop($var);
+  $last_code = substr($var, -1, 1, ""); # same thing
+
+  Once you understand this equivalence, you can use it to do bigger chops. To
+  Eeucjp::chop more than one character, use substr as an lvalue, assigning a null
+  string. The following removes the last five characters of $caravan:
+
+  substr($caravan, -5) = '';
+
+  The negative subscript causes substr to count from the end of the string instead
+  of the beginning. To save the removed characters, you could use the four-argument
+  form of substr, creating something of a quintuple Eeucjp::chop;
+
+  $tail = substr($caravan, -5, 5, '');
+
+  This is all dangerous business dealing with characters instead of graphemes. Perl
+  doesn't really have a grapheme mode, so you have to deal with them yourself.
 
 =item Index string
 
-  $pos = Eeucjp::index($string,$substr,$position);
-  $pos = Eeucjp::index($string,$substr);
+  $byte_pos = Eeucjp::index($string,$substr,$byte_offset);
+  $byte_pos = Eeucjp::index($string,$substr);
 
-  Returns the position of the first occurrence of $substr in EUC-JP $string.
-  The start, if specified, specifies the $position to start looking in the EUC-JP
-  $string. Positions are integer numbers based at 0. If the substring is not found,
-  the Eeucjp::index function returns -1.
+  This function searches for one string within another. It returns the byte position
+  of the first occurrence of $substring in $string. The $byte_offset, if specified,
+  says how many bytes from the start to skip before beginning to look. Positions are
+  based at 0. If the substring is not found, the function returns one less than the
+  base, ordinarily -1. To work your way through a string, you might say:
+
+  $byte_pos = -1;
+  while (($byte_pos = Eeucjp::index($string, $lookfor, $byte_pos)) > -1) {
+      print "Found at $byte_pos\n";
+      $byte_pos++;
+  }
 
 =item Reverse index string
 
-  $pos = Eeucjp::rindex($string,$substr,$position);
-  $pos = Eeucjp::rindex($string,$substr);
+  $byte_pos = Eeucjp::rindex($string,$substr,$byte_offset);
+  $byte_pos = Eeucjp::rindex($string,$substr);
 
-  Works just like Eeucjp::index except that it returns the position of the last
-  occurence of $substr in EUC-JP $string (a reverse index). The function returns
-  -1 if not found. $position, if specified, is the rightmost position that may be
-  returned, i.e., how far in the EUC-JP string the function can search.
+  This function works just like Eeucjp::index except that it returns the byte
+  position of the last occurrence of $substring in $string (a reverse Eeucjp::index).
+  The function returns -1 if $substring is not found. $byte_offset, if specified,
+  is the rightmost byte position that may be returned. To work your way through a
+  string backward, say:
+
+  $byte_pos = length($string);
+  while (($byte_pos = EUCJP::rindex($string, $lookfor, $byte_pos)) >= 0) {
+      print "Found at $byte_pos\n";
+      $byte_pos--;
+  }
+
+=item Lower case string
+
+  $lc = Eeucjp::lc($string);
+  $lc = Eeucjp::lc_;
+
+  This function returns a lowercased version of EUC-JP $string (or $_, if
+  $string is omitted). This is the internal function implementing the \L escape
+  in double-quoted strings.
+
+  You can use the Eeucjp::fc function for case-insensitive comparisons via EUCJP
+  software.
+
+=item Lower case first character of string
+
+  $lcfirst = Eeucjp::lcfirst($string);
+  $lcfirst = Eeucjp::lcfirst_;
+
+  This function returns a version of EUC-JP $string with the first character
+  lowercased (or $_, if $string is omitted). This is the internal function
+  implementing the \l escape in double-quoted strings.
+
+=item Upper case string
+
+  $uc = Eeucjp::uc($string);
+  $uc = Eeucjp::uc_;
+
+  This function returns an uppercased version of EUC-JP $string (or $_, if
+  $string is omitted). This is the internal function implementing the \U escape
+  in interpolated strings. For titlecase, use Eeucjp::ucfirst instead.
+
+  You can use the Eeucjp::fc function for case-insensitive comparisons via EUCJP
+  software.
+
+=item Upper case first character of string
+
+  $ucfirst = Eeucjp::ucfirst($string);
+  $ucfirst = Eeucjp::ucfirst_;
+
+  This function returns a version of EUC-JP $string with the first character
+  titlecased and other characters left alone (or $_, if $string is omitted).
+  Titlecase is "Camel" for an initial capital that has (or expects to have)
+  lowercase characters following it, not uppercase ones. Exsamples are the first
+  letter of a sentence, of a person's name, of a newspaper headline, or of most
+  words in a title. Characters with no titlecase mapping return the uppercase
+  mapping instead. This is the internal function implementing the \u escape in
+  double-quoted strings.
+
+  To capitalize a string by mapping its first character to titlecase and the rest
+  to lowercase, use:
+
+  $titlecase = Eeucjp::ucfirst(substr($word,0,1)) . Eeucjp::lc(substr($word,1));
+
+  or
+
+  $string =~ s/(\w)(\w*)/\u$1\L$2/g;
+
+  Do not use:
+
+  $do_not_use = Eeucjp::ucfirst(Eeucjp::lc($word));
+
+  or "\u\L$word", because that can produce a different and incorrect answer with
+  certain characters. The titlecase of something that's been lowercased doesn't
+  always produce the same thing titlecasing the original produces.
+
+  Because titlecasing only makes sense at the start of a string that's followed
+  by lowercase characters, we can't think of any reason you might want to titlecase
+  every character in a string.
+
+  See also P.287 A Case of Mistaken Identity
+  in Chapter 6: Unicode
+  of ISBN 978-0-596-00492-7 Programming Perl 4th Edition.
+
+=item Fold case string
+
+  P.860 fc
+  in Chapter 27: Functions
+  of ISBN 978-0-596-00492-7 Programming Perl 4th Edition.
+
+  $fc = Eeucjp::fc($string);
+  $fc = Eeucjp::fc_;
+
+  New to EUCJP software, this function returns the full Unicode-like casefold of
+  EUC-JP $string (or $_, if omitted). This is the internal function implementing
+  the \F escape in double-quoted strings.
+
+  Just as title-case is based on uppercase but different, foldcase is based on
+  lowercase but different. In ASCII there is a one-to-one mapping between only
+  two cases, but in other encoding there is a one-to-many mapping and between three
+  cases. Because that's too many combinations to check manually each time, a fourth
+  casemap called foldcase was invented as a common intermediary for the other three.
+  It is not a case itself, but it is a casemap.
+
+  To compare whether two strings are the same without regard to case, do this:
+
+  Eeucjp::fc($a) eq Eeucjp::fc($b)
+
+  The reliable way to compare string case-insensitively was with the /i pattern
+  modifier, because EUCJP software has always used casefolding semantics for
+  case-insensitive pattern matches. Knowing this, you can emulate equality
+  comparisons like this:
+
+  sub fc_eq ($$) {
+      my($a,$b) = @_;
+      return $a =~ /\A\Q$b\E\z/i;
+  }
+
+=item Make ignore case string
+
+  @ignorecase = Eeucjp::ignorecase(@string);
+
+  This function is internal use to m/ /i, s/ / /i, split / /i and qr/ /i.
 
 =item Make capture number
 
@@ -2358,33 +2866,55 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
   $chr = Eeucjp::chr($code);
   $chr = Eeucjp::chr_;
 
-  This function returns the character represented by that $code in the character
-  set. For example, Eeucjp::chr(65) is "A" in either ASCII or EUC-JP, not Unicode,
-  and Eeucjp::chr(0x82a0) is a EUC-JP HIRAGANA LETTER A. For the reverse of
-  Eeucjp::chr, use EUCJP::ord.
+  This function returns a programmer-visible character, character represented by
+  that $code in the character set. For example, Eeucjp::chr(65) is "A" in either
+  ASCII or EUC-JP, not Unicode. For the reverse of Eeucjp::chr, use EUCJP::ord.
 
 =item Filename expansion (globbing)
 
   @glob = Eeucjp::glob($string);
   @glob = Eeucjp::glob_;
 
-  Performs filename expansion (DOS-like globbing) on $string, returning the next
-  successive name on each call. If $string is omitted, $_ is globbed instead.
+  This function returns the value of $string with filename expansions the way a
+  shell would expand them, returning the next successive name on each call.
+  If $string is omitted, $_ is globbed instead. This is the internal function
+  implementing the <*> operator.
   This function function when the pathname ends with chr(0x5C) on MSWin32.
 
-  For example, C<<..\\l*b\\file/*glob.p?>> on MSWin32 or UNIX will work as
-  expected (in that it will find something like '..\lib\File/DosGlob.pm'
-  alright).
-  Note that all path components are
-  case-insensitive, and that backslashes and forward slashes are both accepted,
-  and preserved. You may have to double the backslashes if you are putting them in
-  literally, due to double-quotish parsing of the pattern by perl.
-  A tilde ("~") expands to the current user's home directory.
+  For economic reasons, the algorithm matches the command.com or cmd.exe's style
+  of expansion, not the UNIX-like shell's. An asterisk ("*") matches any sequence
+  of any character (including none). A question mark ("?") matches any one
+  character or none. A tilde ("~") expands to a home directory, as in "~/.*rc"
+  for all the current user's "rc" files, or "~jane/Mail/*" for all of Jane's mail
+  files.
 
-  Spaces in the argument delimit distinct patterns, so C<glob('*.exe *.dll')> globs
-  all filenames that end in C<.exe> or C<.dll>. If you want to put in literal spaces
-  in the glob pattern, you can escape them with either double quotes.
-  e.g. C<glob('c:/"Program Files"/*/*.dll')>.
+  For example, C<<..\\l*b\\file/*glob.p?>> on MSWin32 or UNIX will work as
+  expected (in that it will find something like '..\lib\File/DosGlob.pm' alright).
+
+  Note that all path components are case-insensitive, and that backslashes and
+  forward slashes are both accepted, and preserved. You may have to double the
+  backslashes if you are putting them in literally, due to double-quotish parsing
+  of the pattern by perl.
+
+  The Eeucjp::glob function grandfathers the use of whitespace to separate multiple
+  patterns such as <*.c *.h>. If you want to glob filenames that might contain
+  whitespace, you'll have to use extra quotes around the spacy filename to protect
+  it. For example, to glob filenames that have an "e" followed by a space followed
+  by an "f", use either of:
+
+  @spacies = <"*e f*">;
+  @spacies = Eeucjp::glob('"*e f*"');
+  @spacies = Eeucjp::glob(q("*e f*"));
+
+  If you had to get a variable through, you could do this:
+
+  @spacies = Eeucjp::glob("'*${var}e f*'");
+  @spacies = Eeucjp::glob(qq("*${var}e f*"));
+
+  Hint: Programmer Efficiency
+
+  "When I'm on Windows, I use split(/\n/,`dir /s /b *.* 2>NUL`) instead of glob('*.*')"
+  -- ina
 
 =cut
 

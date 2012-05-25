@@ -23,11 +23,11 @@ else {
     print "not ok - 2 $^X $__FILE__ ('def' =~ /\\LDEF\\E/)\n";
 }
 
-if ('({[' =~ /\Q({[\E/) {
-    print "ok - 3 $^X $__FILE__ ('({[' =~ /\\Q({[\\E/)\n";
+if ('({[' =~ /\Q({\[\E/) {
+    print "ok - 3 $^X $__FILE__ ('({[' =~ /\\Q({\\[\\E/)\n";
 }
 else {
-    print "not ok - 3 $^X $__FILE__ ('({[' =~ /\\Q({[\\E/)\n";
+    print "not ok - 3 $^X $__FILE__ ('({[' =~ /\\Q({\\[\\E/)\n";
 }
 
 my $var = 'GHI';
