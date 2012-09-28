@@ -13,10 +13,10 @@ BEGIN {
     if ($^X =~ / jperl /oxmsi) {
         die __FILE__, ": needs perl(not jperl) 5.00503 or later. (\$^X==$^X)";
     }
-    if (ord('A') == 193) {
+    if (CORE::ord('A') == 193) {
         die __FILE__, ": is not US-ASCII script (may be EBCDIC or EBCDIK script).";
     }
-    if (ord('A') != 0x41) {
+    if (CORE::ord('A') != 0x41) {
         die __FILE__, ": is not US-ASCII script (must be US-ASCII script).";
     }
 }
@@ -27,7 +27,7 @@ BEGIN {
 # (and so on)
 
 BEGIN { eval q{ use vars qw($VERSION) } }
-$VERSION = sprintf '%d.%02d', q$Revision: 0.82 $ =~ /(\d+)/xmsg;
+$VERSION = sprintf '%d.%02d', q$Revision: 0.83 $ =~ /(\d+)/xmsg;
 
 BEGIN {
     my $PERL5LIB = __FILE__;
@@ -181,7 +181,7 @@ elsif (__PACKAGE__ =~ / \b Eeucjp \z/oxms) {
                [0x90..0xA0],
                [0xFF..0xFF],
              ],
-        2 => [ [0x8E..0x8E],[0xA1..0xDF],
+        2 => [ [0x8E..0x8E],[0xA1..0xFE],
                [0xA1..0xFE],[0xA1..0xFE],
              ],
         3 => [ [0x8F..0x8F],[0xA1..0xFE],[0xA1..0xFE],
@@ -234,71 +234,72 @@ sub EUCJP::rindex($$;$);
 # Character class
 #
 BEGIN { eval q{ use vars qw(
-    @anchor
-    @dot
-    @dot_s
-    @eD
-    @eS
-    @eW
-    @eH
-    @eV
-    @eR
-    @eN
-    @not_alnum
-    @not_alpha
-    @not_ascii
-    @not_blank
-    @not_cntrl
-    @not_digit
-    @not_graph
-    @not_lower
-    @not_lower_i
-    @not_print
-    @not_punct
-    @not_space
-    @not_upper
-    @not_upper_i
-    @not_word
-    @not_xdigit
-    @eb
-    @eB
+    $anchor
+    $dot
+    $dot_s
+    $eD
+    $eS
+    $eW
+    $eH
+    $eV
+    $eR
+    $eN
+    $not_alnum
+    $not_alpha
+    $not_ascii
+    $not_blank
+    $not_cntrl
+    $not_digit
+    $not_graph
+    $not_lower
+    $not_lower_i
+    $not_print
+    $not_punct
+    $not_space
+    $not_upper
+    $not_upper_i
+    $not_word
+    $not_xdigit
+    $eb
+    $eB
+    $matched
 ) } }
-@{Eeucjp::anchor}      = qr{\G(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE])*?};
-@{Eeucjp::dot}         = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x0A])};
-@{Eeucjp::dot_s}       = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE])};
-@{Eeucjp::eD}          = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE0-9])};
+${Eeucjp::anchor}      = qr{\G(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE])*?};
+${Eeucjp::dot}         = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x0A])};
+${Eeucjp::dot_s}       = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE])};
+${Eeucjp::eD}          = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE0-9])};
 
-@{Eeucjp::eS}          = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x09\x0A\x0C\x0D\x20])};
+${Eeucjp::eS}          = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x09\x0A\x0C\x0D\x20])};
 
 # Incompatible Changes
 # \s in regular expressions now matches a Vertical Tab (experimental)
 # http://search.cpan.org/~zefram/perl-5.17.0/pod/perldelta.pod
 
-# @{Eeucjp::eS}        = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x09\x0A\x0B\x0C\x0D\x20])};
+# ${Eeucjp::eS}        = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x09\x0A\x0B\x0C\x0D\x20])};
 
-@{Eeucjp::eW}          = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE0-9A-Z_a-z])};
-@{Eeucjp::eH}          = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x09\x20])};
-@{Eeucjp::eV}          = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x0A\x0B\x0C\x0D])};
-@{Eeucjp::eR}          = qr{(?:\x0D\x0A|[\x0A\x0D])};
-@{Eeucjp::eN}          = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x0A])};
-@{Eeucjp::not_alnum}   = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x30-\x39\x41-\x5A\x61-\x7A])};
-@{Eeucjp::not_alpha}   = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x41-\x5A\x61-\x7A])};
-@{Eeucjp::not_ascii}   = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x00-\x7F])};
-@{Eeucjp::not_blank}   = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x09\x20])};
-@{Eeucjp::not_cntrl}   = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x00-\x1F\x7F])};
-@{Eeucjp::not_digit}   = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x30-\x39])};
-@{Eeucjp::not_graph}   = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x21-\x7F])};
-@{Eeucjp::not_lower}   = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x61-\x7A])};
-@{Eeucjp::not_lower_i} = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE])};
-@{Eeucjp::not_print}   = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x20-\x7F])};
-@{Eeucjp::not_punct}   = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x21-\x2F\x3A-\x3F\x40\x5B-\x5F\x60\x7B-\x7E])};
-@{Eeucjp::not_space}   = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x09\x0A\x0B\x0C\x0D\x20])};
-@{Eeucjp::not_upper}   = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x41-\x5A])};
-@{Eeucjp::not_upper_i} = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE])};
-@{Eeucjp::not_word}    = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x30-\x39\x41-\x5A\x5F\x61-\x7A])};
-@{Eeucjp::not_xdigit}  = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x30-\x39\x41-\x46\x61-\x66])};
-@{Eeucjp::eb}          = qr{(?:\A(?=[0-9A-Z_a-z])|(?<=[\x00-\x2F\x40\x5B-\x5E\x60\x7B-\xFF])(?=[0-9A-Z_a-z])|(?<=[0-9A-Z_a-z])(?=[\x00-\x2F\x40\x5B-\x5E\x60\x7B-\xFF]|\z))};
-@{Eeucjp::eB}          = qr{(?:(?<=[0-9A-Z_a-z])(?=[0-9A-Z_a-z])|(?<=[\x00-\x2F\x40\x5B-\x5E\x60\x7B-\xFF])(?=[\x00-\x2F\x40\x5B-\x5E\x60\x7B-\xFF]))};
+${Eeucjp::eW}          = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE0-9A-Z_a-z])};
+${Eeucjp::eH}          = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x09\x20])};
+${Eeucjp::eV}          = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x0A\x0B\x0C\x0D])};
+${Eeucjp::eR}          = qr{(?:\x0D\x0A|[\x0A\x0D])};
+${Eeucjp::eN}          = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x0A])};
+${Eeucjp::not_alnum}   = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x30-\x39\x41-\x5A\x61-\x7A])};
+${Eeucjp::not_alpha}   = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x41-\x5A\x61-\x7A])};
+${Eeucjp::not_ascii}   = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x00-\x7F])};
+${Eeucjp::not_blank}   = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x09\x20])};
+${Eeucjp::not_cntrl}   = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x00-\x1F\x7F])};
+${Eeucjp::not_digit}   = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x30-\x39])};
+${Eeucjp::not_graph}   = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x21-\x7F])};
+${Eeucjp::not_lower}   = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x61-\x7A])};
+${Eeucjp::not_lower_i} = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE])};
+${Eeucjp::not_print}   = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x20-\x7F])};
+${Eeucjp::not_punct}   = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x21-\x2F\x3A-\x3F\x40\x5B-\x5F\x60\x7B-\x7E])};
+${Eeucjp::not_space}   = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x09\x0A\x0B\x0C\x0D\x20])};
+${Eeucjp::not_upper}   = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x41-\x5A])};
+${Eeucjp::not_upper_i} = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE])};
+${Eeucjp::not_word}    = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x30-\x39\x41-\x5A\x5F\x61-\x7A])};
+${Eeucjp::not_xdigit}  = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x30-\x39\x41-\x46\x61-\x66])};
+${Eeucjp::eb}          = qr{(?:\A(?=[0-9A-Z_a-z])|(?<=[\x00-\x2F\x40\x5B-\x5E\x60\x7B-\xFF])(?=[0-9A-Z_a-z])|(?<=[0-9A-Z_a-z])(?=[\x00-\x2F\x40\x5B-\x5E\x60\x7B-\xFF]|\z))};
+${Eeucjp::eB}          = qr{(?:(?<=[0-9A-Z_a-z])(?=[0-9A-Z_a-z])|(?<=[\x00-\x2F\x40\x5B-\x5E\x60\x7B-\xFF])(?=[\x00-\x2F\x40\x5B-\x5E\x60\x7B-\xFF]))};
 
 #
 # @ARGV wildcard globbing
@@ -802,7 +803,7 @@ sub Eeucjp::fc(@) {
 }
 
 #
-# EUC-JP fold case lower case without parameter
+# EUC-JP fold case without parameter
 #
 sub Eeucjp::fc_() {
     my $s = $_;
@@ -844,7 +845,7 @@ sub Eeucjp::fc_() {
     # in Chapter 29. Pragmatic Modules
     # of ISBN 978-0-596-00492-7 Programming Perl 4th Edition.
 
-    @Eeucjp::matched = (qr/(?{Eeucjp::matched})/);
+    $Eeucjp::matched = qr/(?{Eeucjp::matched})/;
 }
 
 #
@@ -888,11 +889,9 @@ sub Eeucjp::ignorecase(@) {
 
                         # escape character
                         for my $char (@charlist) {
-
-                            # do not use quotemeta here
-                            if ($char =~ /\A ([\x80-\xFF].*) ($metachar) \z/oxms) {
-                                $char = $1 . '\\' . $2;
+                            if (0) {
                             }
+
                             elsif ($char =~ /\A [.|)] \z/oxms) {
                                 $char = $1 . '\\' . $char;
                             }
@@ -927,11 +926,9 @@ sub Eeucjp::ignorecase(@) {
 
                         # escape character
                         for my $char (@charlist) {
-
-                            # do not use quotemeta here
-                            if ($char =~ /\A ([\x80-\xFF].*) ($metachar) \z/oxms) {
-                                $char = $1 . '\\' . $2;
+                            if (0) {
                             }
+
                             elsif ($char =~ /\A [.|)] \z/oxms) {
                                 $char = '\\' . $char;
                             }
@@ -970,9 +967,7 @@ sub Eeucjp::ignorecase(@) {
         for (my $i=0; $i <= $#char; $i++) {
             next if not defined $char[$i];
 
-            # escape last octet of multiple-octet
-            if ($char[$i] =~ /\A ([\x80-\xFF].*) ($metachar) \z/oxms) {
-                $char[$i] = $1 . '\\' . $2;
+            if (0) {
             }
 
             # quote character before ? + * {
@@ -997,9 +992,9 @@ sub classic_character_class($) {
     my($char) = @_;
 
     return {
-        '\D' => '@{Eeucjp::eD}',
-        '\S' => '@{Eeucjp::eS}',
-        '\W' => '@{Eeucjp::eW}',
+        '\D' => '${Eeucjp::eD}',
+        '\S' => '${Eeucjp::eS}',
+        '\W' => '${Eeucjp::eW}',
         '\d' => '[0-9]',
                  # \t  \n  \f  \r space
         '\s' => '[\x09\x0A\x0C\x0D\x20]',
@@ -1037,11 +1032,11 @@ sub classic_character_class($) {
 
         # (and so on)
 
-        '\H' => '@{Eeucjp::eH}',
-        '\V' => '@{Eeucjp::eV}',
+        '\H' => '${Eeucjp::eH}',
+        '\V' => '${Eeucjp::eV}',
         '\h' => '[\x09\x20]',
         '\v' => '[\x0A\x0B\x0C\x0D]',
-        '\R' => '@{Eeucjp::eR}',
+        '\R' => '${Eeucjp::eR}',
 
         # \N
         #
@@ -1049,7 +1044,7 @@ sub classic_character_class($) {
         # Character Classes and other Special Escapes
         # Any character but \n (experimental). Not affected by /s modifier
 
-        '\N' => '@{Eeucjp::eN}',
+        '\N' => '${Eeucjp::eN}',
 
         # \b \B
 
@@ -1062,10 +1057,10 @@ sub classic_character_class($) {
         # of ISBN 978-0-596-00492-7 Programming Perl 4th Edition.
 
         # '\b' => '(?:(?<=\A|\W)(?=\w)|(?<=\w)(?=\W|\z))',
-        '\b' => '@{Eeucjp::eb}',
+        '\b' => '${Eeucjp::eb}',
 
         # '\B' => '(?:(?<=\w)(?=\w)|(?<=\W)(?=\W))',
-        '\B' => '@{Eeucjp::eB}',
+        '\B' => '${Eeucjp::eB}',
 
     }->{$char} || '';
 }
@@ -1633,19 +1628,19 @@ sub _charlist {
             $char[$i] = hexchr($1);
         }
 
-        # \N{CHARNAME} --> N{CHARNAME}
-        elsif ($char[$i] =~ /\A \\ ( N\{ ([^\x8E\x8F\xA1-\xFE0-9\}][^\x8E\x8F\xA1-\xFE\}]*) \} ) \z/oxms) {
-            $char[$i] = $1;
+        # \N{CHARNAME} --> N\{CHARNAME}
+        elsif ($char[$i] =~ /\A \\ (N) ( \{ ([^\x8E\x8F\xA1-\xFE0-9\}][^\x8E\x8F\xA1-\xFE\}]*) \} ) \z/oxms) {
+            $char[$i] = $1 . '\\' . $2;
         }
 
-        # \p{PROPERTY} --> p{PROPERTY}
-        elsif ($char[$i] =~ /\A \\ ( p\{ ([^\x8E\x8F\xA1-\xFE0-9\}][^\x8E\x8F\xA1-\xFE\}]*) \} ) \z/oxms) {
-            $char[$i] = $1;
+        # \p{PROPERTY} --> p\{PROPERTY}
+        elsif ($char[$i] =~ /\A \\ (p) ( \{ ([^\x8E\x8F\xA1-\xFE0-9\}][^\x8E\x8F\xA1-\xFE\}]*) \} ) \z/oxms) {
+            $char[$i] = $1 . '\\' . $2;
         }
 
-        # \P{PROPERTY} --> P{PROPERTY}
-        elsif ($char[$i] =~ /\A \\ ( P\{ ([^\x8E\x8F\xA1-\xFE0-9\}][^\x8E\x8F\xA1-\xFE\}]*) \} ) \z/oxms) {
-            $char[$i] = $1;
+        # \P{PROPERTY} --> P\{PROPERTY}
+        elsif ($char[$i] =~ /\A \\ (P) ( \{ ([^\x8E\x8F\xA1-\xFE0-9\}][^\x8E\x8F\xA1-\xFE\}]*) \} ) \z/oxms) {
+            $char[$i] = $1 . '\\' . $2;
         }
 
         # \p, \P, \X --> p, P, X
@@ -1684,15 +1679,15 @@ sub _charlist {
                 # '\s' => '[\x09\x0A\x0B\x0C\x0D\x20]',
 
                 '\w' => '[0-9A-Z_a-z]',
-                '\D' => '@{Eeucjp::eD}',
-                '\S' => '@{Eeucjp::eS}',
-                '\W' => '@{Eeucjp::eW}',
+                '\D' => '${Eeucjp::eD}',
+                '\S' => '${Eeucjp::eS}',
+                '\W' => '${Eeucjp::eW}',
 
-                '\H' => '@{Eeucjp::eH}',
-                '\V' => '@{Eeucjp::eV}',
+                '\H' => '${Eeucjp::eH}',
+                '\V' => '${Eeucjp::eV}',
                 '\h' => '[\x09\x20]',
                 '\v' => '[\x0A\x0B\x0C\x0D]',
-                '\R' => '@{Eeucjp::eR}',
+                '\R' => '${Eeucjp::eR}',
 
             }->{$1};
         }
@@ -1703,8 +1698,8 @@ sub _charlist {
 
                 '[:lower:]'   => '[\x41-\x5A\x61-\x7A]',
                 '[:upper:]'   => '[\x41-\x5A\x61-\x7A]',
-                '[:^lower:]'  => '@{Eeucjp::not_lower_i}',
-                '[:^upper:]'  => '@{Eeucjp::not_upper_i}',
+                '[:^lower:]'  => '${Eeucjp::not_lower_i}',
+                '[:^upper:]'  => '${Eeucjp::not_upper_i}',
 
             }->{$1};
         }
@@ -1725,20 +1720,20 @@ sub _charlist {
                 '[:upper:]'   => '[\x41-\x5A]',
                 '[:word:]'    => '[\x30-\x39\x41-\x5A\x5F\x61-\x7A]',
                 '[:xdigit:]'  => '[\x30-\x39\x41-\x46\x61-\x66]',
-                '[:^alnum:]'  => '@{Eeucjp::not_alnum}',
-                '[:^alpha:]'  => '@{Eeucjp::not_alpha}',
-                '[:^ascii:]'  => '@{Eeucjp::not_ascii}',
-                '[:^blank:]'  => '@{Eeucjp::not_blank}',
-                '[:^cntrl:]'  => '@{Eeucjp::not_cntrl}',
-                '[:^digit:]'  => '@{Eeucjp::not_digit}',
-                '[:^graph:]'  => '@{Eeucjp::not_graph}',
-                '[:^lower:]'  => '@{Eeucjp::not_lower}',
-                '[:^print:]'  => '@{Eeucjp::not_print}',
-                '[:^punct:]'  => '@{Eeucjp::not_punct}',
-                '[:^space:]'  => '@{Eeucjp::not_space}',
-                '[:^upper:]'  => '@{Eeucjp::not_upper}',
-                '[:^word:]'   => '@{Eeucjp::not_word}',
-                '[:^xdigit:]' => '@{Eeucjp::not_xdigit}',
+                '[:^alnum:]'  => '${Eeucjp::not_alnum}',
+                '[:^alpha:]'  => '${Eeucjp::not_alpha}',
+                '[:^ascii:]'  => '${Eeucjp::not_ascii}',
+                '[:^blank:]'  => '${Eeucjp::not_blank}',
+                '[:^cntrl:]'  => '${Eeucjp::not_cntrl}',
+                '[:^digit:]'  => '${Eeucjp::not_digit}',
+                '[:^graph:]'  => '${Eeucjp::not_graph}',
+                '[:^lower:]'  => '${Eeucjp::not_lower}',
+                '[:^print:]'  => '${Eeucjp::not_print}',
+                '[:^punct:]'  => '${Eeucjp::not_punct}',
+                '[:^space:]'  => '${Eeucjp::not_space}',
+                '[:^upper:]'  => '${Eeucjp::not_upper}',
+                '[:^word:]'   => '${Eeucjp::not_word}',
+                '[:^xdigit:]' => '${Eeucjp::not_xdigit}',
 
             }->{$1};
         }
@@ -2523,6 +2518,12 @@ sub EUCJP::reverse(@) {
         return CORE::reverse @_;
     }
     else {
+
+        # One of us once cornered Larry in an elevator and asked him what
+        # problem he was solving with this, but he looked as far off into
+        # the distance as he could in an elevator and said, "It seemed like
+        # a good idea at the time."
+
         return join '', CORE::reverse(join('',@_) =~ /\G ($q_char) /oxmsg);
     }
 }
