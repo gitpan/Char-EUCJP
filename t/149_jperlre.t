@@ -1,33 +1,68 @@
 # This file is encoded in EUC-JP.
 die "This file is not encoded in EUC-JP.\n" if q{あ} ne "\xa4\xa2";
 
-print "1..1\n";
+print "1..2\n";
 
 my $__FILE__ = __FILE__;
 
-my $null = '/dev/null';
+if ($^O eq 'MacOS') {
+    print "ok - 1 # SKIP $^X $__FILE__\n";
+    print "ok - 2 # SKIP $^X $__FILE__\n";
+    exit;
+}
+
+my $null = '';
 if ($^O =~ /\A (?: MSWin32 | NetWare | symbian | dos ) \z/oxms) {
-    $null = 'NUL';
+    if ($ENV{'COMSPEC'} =~ / \\COMMAND\.COM \z/oxmsi) {
+        $null = '';
+    }
+    else {
+        $null = '2>NUL';
+    }
+}
+else{
+    $null = '2>/dev/null';
 }
 
 my $script = __FILE__ . '.pl';
-open(TEST,">$script") || die "Can't open file: $script\n";
-print TEST <DATA>;
-close(TEST);
 
-if (system(qq{$^X $script 2>$null}) != 0) {
-    print "ok - 1 $^X $__FILE__ die ('-' =~ /あ[い-あ]/).\n";
+open(TEST,">$script") || die "Can't open file: $script\n";
+print TEST <<'END';
+use Char::EUCJP;
+'-' =~ /(あ[あ-い])/;
+print "PASS\n";
+END
+close(TEST);
+eval {
+    $result = qx{$^X $script $null};
+};
+if ($result =~ /PASS/) {
+    print "ok - 1 $^X $__FILE__ die ('-' =~ /あ[あ-い]/).\n";
 }
 else {
-    print "not ok - 1 $^X $__FILE__ die ('-' =~ /あ[い-あ]/).\n";
+    print "not ok - 1 $^X $__FILE__ die ('-' =~ /あ[あ-い]/).\n";
 }
+unlink("$script");
+unlink("$script.e");
+
+open(TEST,">$script") || die "Can't open file: $script\n";
+print TEST <<'END';
+use Char::EUCJP;
+'-' =~ /(あ[い-あ])/;
+print "PASS\n";
+END
+close(TEST);
+eval {
+    $result = qx{$^X $script $null};
+};
+if ($result !~ /PASS/) {
+    print "ok - 2 $^X $__FILE__ die ('-' =~ /あ[い-あ]/).\n";
+}
+else {
+    print "not ok - 2 $^X $__FILE__ die ('-' =~ /あ[い-あ]/).\n";
+}
+unlink("$script");
+unlink("$script.e");
 
 __END__
-# This file is encoded in EUC-JP.
-die "This file is not encoded in EUC-JP.\n" if q{あ} ne "\xa4\xa2";
 
-use Char::EUCJP;
-
-'-' =~ /(あ[い-あ])/;
-
-exit 0;

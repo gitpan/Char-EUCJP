@@ -3,7 +3,7 @@ package Eeucjp;
 #
 # Eeucjp - Run-time routines for EUCJP.pm
 #
-# Copyright (c) 2008, 2009, 2010, 2011, 2012 INABA Hitoshi <ina@cpan.org>
+# Copyright (c) 2008, 2009, 2010, 2011, 2012, 2013 INABA Hitoshi <ina@cpan.org>
 #
 ######################################################################
 
@@ -27,7 +27,7 @@ BEGIN {
 # (and so on)
 
 BEGIN { eval q{ use vars qw($VERSION) } }
-$VERSION = sprintf '%d.%02d', q$Revision: 0.84 $ =~ /(\d+)/xmsg;
+$VERSION = sprintf '%d.%02d', q$Revision: 0.85 $ =~ /(\d+)/xmsg;
 
 BEGIN {
     my $PERL5LIB = __FILE__;
@@ -87,14 +87,14 @@ BEGIN {
 
         my $ref = \*{$genpkg . $name};
         delete $$genpkg{$name};
-        $ref;
+        return $ref;
     }
 
     sub qualify ($;$) {
         my ($name) = @_;
         if (!ref($name) && (Eeucjp::index($name, '::') == -1) && (Eeucjp::index($name, "'") == -1)) {
             my $pkg;
-            my %global = map {$_ => 1} qw(ARGV ARGVOUT ENV INC SIG STDERR STDIN STDOUT);
+            my %global = map {$_ => 1} qw(ARGV ARGVOUT ENV INC SIG STDERR STDIN STDOUT DATA);
 
             # Global names: special character, "^xyz", or other.
             if ($name =~ /^(([^\x8E\x8F\xA1-\xFEa-z])|(\^[a-z_]+))\z/i || $global{$name}) {
@@ -107,7 +107,7 @@ BEGIN {
             }
             $name = $pkg . "::" . $name;
         }
-        $name;
+        return $name;
     }
 
     sub qualify_to_ref ($;$) {
@@ -118,9 +118,14 @@ BEGIN {
     }
 }
 
+# Column: local $@
+# in Chapter 9. Osaete okitai Perl no kiso
+# of ISBN 10: 4798119172 | ISBN 13: 978-4798119175 MODAN Perl NYUMON
+# (and so on)
+
 # use strict; if strict.pm exists
 BEGIN {
-    if (eval {CORE::require strict}) {
+    if (eval { local $@; CORE::require strict }) {
         strict::->import;
     }
 }
@@ -139,10 +144,10 @@ sub LOCK_UN() {8}
 sub LOCK_NB() {4}
 
 # instead of Carp.pm
-sub carp(@);
-sub croak(@);
-sub cluck(@);
-sub confess(@);
+sub carp;
+sub croak;
+sub cluck;
+sub confess;
 
 my $your_char = q{\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[\x00-\xFF]};
 
@@ -197,7 +202,7 @@ else {
 #
 # @ARGV wildcard globbing
 #
-sub import() {
+sub import {
 
     if ($^O =~ /\A (?: MSWin32 | NetWare | symbian | dos ) \z/oxms) {
         my @argv = ();
@@ -232,10 +237,28 @@ sub import() {
     }
 }
 
+# P.230 Care with Prototypes
+# in Chapter 6: Subroutines
+# of ISBN 0-596-00027-8 Programming Perl Third Edition.
+#
+# If you aren't careful, you can get yourself into trouble with prototypes.
+# But if you are careful, you can do a lot of neat things with them. This is
+# all very powerful, of course, and should only be used in moderation to make
+# the world a better place.
+
+# P.332 Care with Prototypes
+# in Chapter 7: Subroutines
+# of ISBN 978-0-596-00492-7 Programming Perl 4th Edition.
+#
+# If you aren't careful, you can get yourself into trouble with prototypes.
+# But if you are careful, you can do a lot of neat things with them. This is
+# all very powerful, of course, and should only be used in moderation to make
+# the world a better place.
+
 #
 # Prototypes of subroutines
 #
-sub unimport() {}
+sub unimport {}
 sub Eeucjp::split(;$$$);
 sub Eeucjp::tr($$$$;$);
 sub Eeucjp::chop(@);
@@ -251,9 +274,9 @@ sub Eeucjp::uc(@);
 sub Eeucjp::uc_();
 sub Eeucjp::fc(@);
 sub Eeucjp::fc_();
-sub Eeucjp::ignorecase(@);
-sub Eeucjp::classic_character_class($);
-sub Eeucjp::capture($);
+sub Eeucjp::ignorecase;
+sub Eeucjp::classic_character_class;
+sub Eeucjp::capture;
 sub Eeucjp::chr(;$);
 sub Eeucjp::chr_();
 sub Eeucjp::glob($);
@@ -262,6 +285,7 @@ sub Eeucjp::glob_();
 sub EUCJP::ord(;$);
 sub EUCJP::ord_();
 sub EUCJP::reverse(@);
+sub EUCJP::getc(;*@);
 sub EUCJP::length(;$);
 sub EUCJP::substr($$;$$);
 sub EUCJP::index($$;$);
@@ -836,7 +860,7 @@ sub Eeucjp::fc_() {
 
     my $last_s_matched = 0;
 
-    sub Eeucjp::capture($) {
+    sub Eeucjp::capture {
         if ($last_s_matched and ($_[0] =~ /\A [1-9][0-9]* \z/oxms)) {
             return $_[0] + 1;
         }
@@ -867,7 +891,7 @@ sub Eeucjp::fc_() {
 #
 # EUC-JP regexp ignore case modifier
 #
-sub Eeucjp::ignorecase(@) {
+sub Eeucjp::ignorecase {
 
     my @string = @_;
     my $metachar = qr/[\@\\|[\]{]/oxms;
@@ -1004,7 +1028,7 @@ sub Eeucjp::ignorecase(@) {
 #
 # classic character class ( \D \S \W \d \s \w \C \X \H \V \h \v \R \N \b \B )
 #
-sub classic_character_class($) {
+sub Eeucjp::classic_character_class {
     my($char) = @_;
 
     return {
@@ -1350,7 +1374,7 @@ sub _octets {
         my($z1) = unpack 'C', $_[1];
 
         if ($a1 > $z1) {
-            croak 'Invalid [] range in regexp (ord(A) > ord(B)) ' . '\x' . unpack('H*',$a1) . '-\x' . unpack('H*',$z1);
+            croak 'Invalid [] range in regexp (CORE::ord(A) > CORE::ord(B)) ' . '\x' . unpack('H*',$a1) . '-\x' . unpack('H*',$z1);
         }
 
         if ($a1 == $z1) {
@@ -1785,7 +1809,7 @@ sub _charlist {
             }
             elsif (CORE::length($char[$i-1]) == CORE::length($char[$i+1])) {
                 if ($char[$i-1] gt $char[$i+1]) {
-                    croak 'Invalid [] range in regexp (ord(A) > ord(B)) ' . '\x' . unpack('H*',$char[$i-1]) . '-\x' . unpack('H*',$char[$i+1]);
+                    croak 'Invalid [] range in regexp (CORE::ord(A) > CORE::ord(B)) ' . '\x' . unpack('H*',$char[$i-1]) . '-\x' . unpack('H*',$char[$i+1]);
                 }
             }
 
@@ -2667,6 +2691,27 @@ sub EUCJP::reverse(@) {
 }
 
 #
+# EUC-JP getc (with parameter, without parameter)
+#
+sub EUCJP::getc(;*@) {
+
+    my $fh = @_ ? qualify_to_ref(shift) : \*STDIN;
+    croak 'Too many arguments for EUCJP::getc' if @_ and not wantarray;
+
+    my @length = sort { $a <=> $b } keys %range_tr;
+    my $getc = '';
+    for my $length ($length[0] .. $length[-1]) {
+        $getc .= CORE::getc($fh);
+        if (exists $range_tr{CORE::length($getc)}) {
+            if ($getc =~ /\A ${Eeucjp::dot_s} \z/oxms) {
+                return wantarray ? ($getc,@_) : $getc;
+            }
+        }
+    }
+    return wantarray ? ($getc,@_) : $getc;
+}
+
+#
 # EUC-JP length by character
 #
 sub EUCJP::length(;$) {
@@ -2763,7 +2808,7 @@ sub EUCJP::rindex($$;$) {
 #
 # instead of Carp::carp
 #
-sub carp(@) {
+sub carp {
     my($package,$filename,$line) = caller(1);
     print STDERR "@_ at $filename line $line.\n";
 }
@@ -2771,7 +2816,7 @@ sub carp(@) {
 #
 # instead of Carp::croak
 #
-sub croak(@) {
+sub croak {
     my($package,$filename,$line) = caller(1);
     print STDERR "@_ at $filename line $line.\n";
     die "\n";
@@ -2780,14 +2825,14 @@ sub croak(@) {
 #
 # instead of Carp::cluck
 #
-sub cluck(@) {
+sub cluck {
     my $i = 0;
     my @cluck = ();
     while (my($package,$filename,$line,$subroutine) = caller($i)) {
         push @cluck, "[$i] $filename($line) $package::$subroutine\n";
         $i++;
     }
-    print STDERR reverse @cluck;
+    print STDERR CORE::reverse @cluck;
     print STDERR "\n";
     carp @_;
 }
@@ -2795,14 +2840,14 @@ sub cluck(@) {
 #
 # instead of Carp::confess
 #
-sub confess(@) {
+sub confess {
     my $i = 0;
     my @confess = ();
     while (my($package,$filename,$line,$subroutine) = caller($i)) {
         push @confess, "[$i] $filename($line) $package::$subroutine\n";
         $i++;
     }
-    print STDERR reverse @confess;
+    print STDERR CORE::reverse @confess;
     print STDERR "\n";
     croak @_;
 }
@@ -3323,6 +3368,10 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
   # absolute path
   @abspath_file = split(/\n/,`dir /s /b wildcard\\here*.txt 2>NUL`);
+
+  # on COMMAND.COM
+  @relpath_file = split(/\n/,`dir /b wildcard\\here*.txt`);
+  @abspath_file = split(/\n/,`dir /s /b wildcard\\here*.txt`);
 
 =cut
 
