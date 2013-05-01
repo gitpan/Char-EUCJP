@@ -28,7 +28,7 @@ BEGIN {
 # (and so on)
 
 BEGIN { eval q{ use vars qw($VERSION) } }
-$VERSION = sprintf '%d.%02d', q$Revision: 0.87 $ =~ /(\d+)/xmsg;
+$VERSION = sprintf '%d.%02d', q$Revision: 0.88 $ =~ /(\d+)/xmsg;
 
 BEGIN {
     my $PERL5LIB = __FILE__;
@@ -296,7 +296,6 @@ sub EUCJP::rindex($$;$);
 # Character class
 #
 BEGIN { eval q{ use vars qw(
-    $anchor
     $dot
     $dot_s
     $eD
@@ -324,9 +323,133 @@ BEGIN { eval q{ use vars qw(
     $not_xdigit
     $eb
     $eB
+) } }
+
+BEGIN { eval q{ use vars qw(
+    $anchor
     $matched
 ) } }
-${Eeucjp::anchor}      = qr{\G(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE])*?};
+${Eeucjp::anchor}      = qr{\G(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE])*?}oxms;
+
+# Quantifiers
+#   {n,m}  ---  Match at least n but not more than m times
+#
+# n and m are limited to non-negative integral values less than a
+# preset limit defined when perl is built. This is usually 32766 on
+# the most common platforms.
+#
+# The following code is an attempt to solve the above limitations
+# in a multi-byte anchoring.
+
+# avoid "Segmentation fault" and "Error: Parse exception"
+if (($] >= 5.010) or
+    (defined($ActivePerl::VERSION) and ($ActivePerl::VERSION > 800)) or
+    (($^O eq 'MSWin32') and ($] =~ /\A 5\.006/oxms))
+) {
+    my $sbcs = ''; # Single Byte Character Set
+    for my $range (@{ $range_tr{1} }) {
+        $sbcs .= sprintf('\\x%02X-\\x%02X', $range->[0], $range->[-1]);
+    }
+
+    # GB18030 encoding
+    if (__PACKAGE__ =~ / \b Egb18030 \z/oxms) {
+        ${Eeucjp::anchor_SADAHIRO_Tomoyuki_2002_01_17} =
+        qr{\G(?(?=.{0,32766}\z)(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE])*?|(?(?=[$sbcs]+\z).*?|(?:.*?[^\x30-\x39\x81-\xFE](?:[\x30-\x39]|[\x81-\xFE][\x30-\x39][\x81-\xFE][\x30-\x39]|[\x81-\xFE]{2})*?)))}oxms;
+#       qr{
+#          \G # (1), (2)
+#            (? # (3)
+#              (?=.{0,32766}\z) # (4)
+#                              (?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE])*?| # (5)
+#                                                                                          (?(?=[$sbcs]+\z) # (6)
+#                                                                                                          .*?| #(7)
+#                                                                                                              (?:.*?[^\x30-\x39\x81-\xFE](?:[\x30-\x39]|[\x81-\xFE][\x30-\x39][\x81-\xFE][\x30-\x39]|[\x81-\xFE]{2})*?) # (8)
+#                                                                                                                                                                                                                       ))}oxms;
+    }
+
+    # other encoding
+    else {
+        my $tbcs_1st = ''; # 1st octet of Triple Byte Character Set
+        if (exists($range_tr{3}) and not exists($range_tr{4})) {
+            for my $range (@{ $range_tr{3} }) {
+                if ($range->[0] != $range->[-1]) {
+                    $tbcs_1st .= sprintf('\\x%02X-\\x%02X', $range->[0], $range->[-1]);
+                }
+                else {
+                    $tbcs_1st .= sprintf('\\x%02X',         $range->[0]);
+                }
+            }
+            $tbcs_1st = "[$tbcs_1st]?";
+        }
+
+        ${Eeucjp::anchor_SADAHIRO_Tomoyuki_2002_01_17} =
+        qr{\G(?(?=.{0,32766}\z)(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE])*?|(?(?=[$sbcs]+\z).*?|(?:.*?[$sbcs](?:$tbcs_1st[^$sbcs]{2})*?)))}oxms;
+#       qr{
+#          \G # (1), (2)
+#            (? # (3)
+#              (?=.{0,32766}\z) # (4)
+#                              (?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE])*?| # (5)
+#                                                                                          (?(?=[$sbcs]+\z) # (6)
+#                                                                                                          .*?| #(7)
+#                                                                                                              (?:.*?[$sbcs](?:$tbcs_1st[^$sbcs]{2})*?) # (8)
+#                                                                                                                                                      ))}oxms;
+    }
+
+    # avoid: Complex regular subexpression recursion limit (32766) exceeded at here.
+    local $^W = 0;
+
+    if (((('A' x 32768).'B') !~ / ${Eeucjp::anchor}                              B /oxms) and
+        ((('A' x 32768).'B') =~ / ${Eeucjp::anchor_SADAHIRO_Tomoyuki_2002_01_17} B /oxms)
+    ) {
+        ${Eeucjp::anchor} = ${Eeucjp::anchor_SADAHIRO_Tomoyuki_2002_01_17};
+    }
+}
+
+# (1)
+# P.128 Start of match (or end of previous match): \G
+# P.130 Advanced Use of \G with Perl
+# in Chapter3: Over view of Regular Expression Features and Flavors
+# of ISBN 0-596-00289-0 Mastering Regular Expressions, Second edition
+
+# (2)
+# P.255 Use leading anchors
+# P.256 Expose ^ and \G at the front of expressions
+# in Chapter6: Crafting an Efficient Expression
+# of ISBN 0-596-00289-0 Mastering Regular Expressions, Second edition
+
+# (3)
+# P.138 Conditional: (? if then| else)
+# in Chapter3: Over view of Regular Expression Features and Flavors
+# of ISBN 0-596-00289-0 Mastering Regular Expressions, Second edition
+
+# (4)
+# perlre
+# http://perldoc.perl.org/perlre.html
+# The "*" quantifier is equivalent to {0,} , the "+" quantifier to {1,} ,
+# and the "?" quantifier to {0,1} . n and m are limited to non-negative
+# integral values less than a preset limit defined when perl is built.
+# This is usually 32766 on the most common platforms. The actual limit
+# can be seen in the error message generated by code such as this:
+#  $_ **= $_ , / {$_} / for 2 .. 42;
+
+# (5)
+# P.1023 Multiple-Byte Anchoring
+# in Appendix W Perl Code Examples
+# of ISBN 1-56592-224-7 CJKV Information Processing
+
+# (6)
+# if string has only SBCS (Single Byte Character Set)
+
+# (7)
+# then .*? (isn't limited to 32766)
+
+# (8)
+# else EUC-JP::Regexp::Const (SADAHIRO Tomoyuki)
+# http://homepage1.nifty.com/nomenclator/perl/shiftjis.htm#long
+# http://search.cpan.org/~sadahiro/EUC-JP-Regexp/
+# $PadA  = '  (?:\A|                                           [\x00-\x80\xA0-\xDF])(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE]{2})*?';
+# $PadG  = '\G(?:                                |[\x00-\xFF]*?[\x00-\x80\xA0-\xDF])(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE]{2})*?';
+# $PadGA = '\G(?:\A|(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE]{2})+?|[\x00-\xFF]*?[\x00-\x80\xA0-\xDF] (?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE]{2})*?)';
+
 ${Eeucjp::dot}         = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x0A])};
 ${Eeucjp::dot_s}       = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE])};
 ${Eeucjp::eD}          = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE0-9])};
@@ -362,6 +485,35 @@ ${Eeucjp::not_word}    = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\
 ${Eeucjp::not_xdigit}  = qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x30-\x39\x41-\x46\x61-\x66])};
 ${Eeucjp::eb}          = qr{(?:\A(?=[0-9A-Z_a-z])|(?<=[\x00-\x2F\x40\x5B-\x5E\x60\x7B-\xFF])(?=[0-9A-Z_a-z])|(?<=[0-9A-Z_a-z])(?=[\x00-\x2F\x40\x5B-\x5E\x60\x7B-\xFF]|\z))};
 ${Eeucjp::eB}          = qr{(?:(?<=[0-9A-Z_a-z])(?=[0-9A-Z_a-z])|(?<=[\x00-\x2F\x40\x5B-\x5E\x60\x7B-\xFF])(?=[\x00-\x2F\x40\x5B-\x5E\x60\x7B-\xFF]))};
+
+# avoid: Name "Eeucjp::foo" used only once: possible typo at here.
+${Eeucjp::dot}         = ${Eeucjp::dot};
+${Eeucjp::dot_s}       = ${Eeucjp::dot_s};
+${Eeucjp::eD}          = ${Eeucjp::eD};
+${Eeucjp::eS}          = ${Eeucjp::eS};
+${Eeucjp::eW}          = ${Eeucjp::eW};
+${Eeucjp::eH}          = ${Eeucjp::eH};
+${Eeucjp::eV}          = ${Eeucjp::eV};
+${Eeucjp::eR}          = ${Eeucjp::eR};
+${Eeucjp::eN}          = ${Eeucjp::eN};
+${Eeucjp::not_alnum}   = ${Eeucjp::not_alnum};
+${Eeucjp::not_alpha}   = ${Eeucjp::not_alpha};
+${Eeucjp::not_ascii}   = ${Eeucjp::not_ascii};
+${Eeucjp::not_blank}   = ${Eeucjp::not_blank};
+${Eeucjp::not_cntrl}   = ${Eeucjp::not_cntrl};
+${Eeucjp::not_digit}   = ${Eeucjp::not_digit};
+${Eeucjp::not_graph}   = ${Eeucjp::not_graph};
+${Eeucjp::not_lower}   = ${Eeucjp::not_lower};
+${Eeucjp::not_lower_i} = ${Eeucjp::not_lower_i};
+${Eeucjp::not_print}   = ${Eeucjp::not_print};
+${Eeucjp::not_punct}   = ${Eeucjp::not_punct};
+${Eeucjp::not_space}   = ${Eeucjp::not_space};
+${Eeucjp::not_upper}   = ${Eeucjp::not_upper};
+${Eeucjp::not_upper_i} = ${Eeucjp::not_upper_i};
+${Eeucjp::not_word}    = ${Eeucjp::not_word};
+${Eeucjp::not_xdigit}  = ${Eeucjp::not_xdigit};
+${Eeucjp::eb}          = ${Eeucjp::eb};
+${Eeucjp::eB}          = ${Eeucjp::eB};
 
 #
 # EUC-JP split
