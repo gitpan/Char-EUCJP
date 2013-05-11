@@ -51,45 +51,6 @@ To install this software without make, type the following:
    pmake.bat dist       --- make distribution package
    pmake.bat ptar.bat   --- make perl script "ptar.bat"
 
-PROGRAM COMPOSITION
-
-   Char/EUCJP.pm         --- source code filter for EUC-JP script
-   Char/Eeucjp.pm        --- run-time routines for Char/EUCJP.pm
-   EUCJP.pm              --- alias of Char/EUCJP.pm
-   Eeucjp.pm             --- alias of Char/Eeucjp.pm
-   perl5.bat             --- find and run perl5    without %PATH% settings
-   perl55.bat            --- find and run perl5.5  without %PATH% settings
-   perl56.bat            --- find and run perl5.6  without %PATH% settings
-   perl58.bat            --- find and run perl5.8  without %PATH% settings
-   perl510.bat           --- find and run perl5.10 without %PATH% settings
-   perl512.bat           --- find and run perl5.12 without %PATH% settings
-   perl514.bat           --- find and run perl5.14 without %PATH% settings
-   perl516.bat           --- find and run perl5.16 without %PATH% settings
-   perl64.bat            --- find and run perl64   without %PATH% settings
-   perl64512.bat         --- find and run perl5.12 (x64) without %PATH% settings
-   perl64514.bat         --- find and run perl5.14 (x64) without %PATH% settings
-   perl64516.bat         --- find and run perl5.16 (x64) without %PATH% settings
-   aperl58.bat           --- find and run ActivePerl 5.8  without %PATH% settings
-   aperl510.bat          --- find and run ActivePerl 5.10 without %PATH% settings
-   aperl512.bat          --- find and run ActivePerl 5.12 without %PATH% settings
-   aperl514.bat          --- find and run ActivePerl 5.14 without %PATH% settings
-   aperl516.bat          --- find and run ActivePerl 5.16 without %PATH% settings
-   aperl64512.bat        --- find and run ActivePerl 5.12 (x64) without %PATH% settings
-   aperl64514.bat        --- find and run ActivePerl 5.14 (x64) without %PATH% settings
-   aperl64516.bat        --- find and run ActivePerl 5.16 (x64) without %PATH% settings
-   sperl58.bat           --- find and run Strawberry Perl 5.8  without %PATH% settings
-   sperl510.bat          --- find and run Strawberry Perl 5.10 without %PATH% settings
-   sperl512.bat          --- find and run Strawberry Perl 5.12 without %PATH% settings
-   sperl514.bat          --- find and run Strawberry Perl 5.14 without %PATH% settings
-   sperl516.bat          --- find and run Strawberry Perl 5.16 without %PATH% settings
-   sperl64512.bat        --- find and run Strawberry Perl 5.12 (x64) without %PATH% settings
-   sperl64514.bat        --- find and run Strawberry Perl 5.14 (x64) without %PATH% settings
-   sperl64516.bat        --- find and run Strawberry Perl 5.16 (x64) without %PATH% settings
-   strict.pm_            --- dummy strict.pm
-   warnings.pm_          --- poor warnings.pm
-   warnings/register.pm_ --- poor warnings/register.pm
-   feature.pm_           --- dummy feature.pm
-
 DEPENDENCIES
 
 This software requires perl5.00503 or later.
@@ -117,13 +78,13 @@ EUC-JP is a variable-width encoding used to represent the elements of three
 Japanese character set standards, namely JIS X 0208, JIS X 0212, and JIS X 0201.
 
 * A character from the lower half of JIS-X-0201 (ASCII, code set 0) is represented
- by one byte, in the range 0x21 ‚œ 0x7E. 
+ by one byte, in the range 0x21 .. 0x7E. 
 * A character from the upper half of JIS-X-0201 (half-width kana, code set 2) is
- represented by two bytes, the first being 0x8E, the second in the range 0xA1 ‚œ 0xDF.
+ represented by two bytes, the first being 0x8E, the second in the range 0xA1 .. 0xDF.
 * A character from JIS-X-0208 (code set 1) is represented by two bytes, both in the
- range 0xA1 ‚œ 0xFE. 
+ range 0xA1 .. 0xFE. 
 * A character from JIS-X-0212 (code set 3) is represented by three bytes, the first
- being 0x8F, the following two in the range 0xA1 ‚œ 0xFE.
+ being 0x8F, the following two in the range 0xA1 .. 0xFE.
 
 This encoding scheme allows the easy mixing of 7-bit ASCII and 8-bit Japanese
 without the need for the escape characters employed by ISO-2022-JP, which is based

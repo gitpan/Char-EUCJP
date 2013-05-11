@@ -28,7 +28,7 @@ BEGIN {
 # (and so on)
 
 BEGIN { eval q{ use vars qw($VERSION) } }
-$VERSION = sprintf '%d.%02d', q$Revision: 0.88 $ =~ /(\d+)/xmsg;
+$VERSION = sprintf '%d.%02d', q$Revision: 0.89 $ =~ /(\d+)/xmsg;
 
 BEGIN {
     my $PERL5LIB = __FILE__;
@@ -342,7 +342,15 @@ ${Char::Eeucjp::anchor}      = qr{\G(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE
 # in a multi-byte anchoring.
 
 # avoid "Segmentation fault" and "Error: Parse exception"
-if (($] >= 5.010) or
+
+# perl5101delta
+# http://perldoc.perl.org/perl5101delta.html
+# In 5.10.0, the * quantifier in patterns was sometimes treated as {0,32767}
+# [RT #60034, #60464]. For example, this match would fail:
+#   ("ab" x 32768) =~ /^(ab)*$/
+
+if (($] >= 5.010001) or
+    # ActivePerl 5.6 or later (include 5.10.0)
     (defined($ActivePerl::VERSION) and ($ActivePerl::VERSION > 800)) or
     (($^O eq 'MSWin32') and ($] =~ /\A 5\.006/oxms))
 ) {
