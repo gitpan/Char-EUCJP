@@ -8,7 +8,8 @@ package EUCJP;
 # Copyright (c) 2008, 2009, 2010, 2011, 2012, 2013 INABA Hitoshi <ina@cpan.org>
 ######################################################################
 
-use 5.00503;
+use 5.00503;    # Galapagos Consensus 1998 for primetools
+# use 5.008001; # Lancaster Consensus 2013 for toolchains
 
 BEGIN {
     if ($^X =~ / jperl /oxmsi) {
@@ -28,9 +29,9 @@ BEGIN {
 # (and so on)
 
 BEGIN { eval q{ use vars qw($VERSION) } }
-$VERSION = sprintf '%d.%02d', q$Revision: 0.89 $ =~ /(\d+)/oxmsg;
+$VERSION = sprintf '%d.%02d', q$Revision: 0.90 $ =~ /(\d+)/oxmsg;
 
-BEGIN { require Eeucjp; }
+BEGIN { CORE::require Eeucjp; }
 
 # poor Symbol.pm - substitute of real Symbol.pm
 BEGIN {
@@ -151,6 +152,8 @@ my $qq_variable = qr{(?: \{ (?:$qq_brace)*? \}                    |
                                           (?: (?: -> )? (?: \[ (?: \$\[ | \$\] | $qq_char )*? \] | \{ (?:$qq_brace)*? \} ) )*
                     ))
                   }xms;
+my $qq_substr  = qr{(?: EUCJP::substr | CORE::substr | substr ) \( $qq_paren \)
+                 }xms;
 
 # regexp of nested parens in qXX
 my $q_paren    = qr{(?{local $nest=0}) (?>(?:
@@ -688,7 +691,9 @@ sub escape {
 
 # scalar variable $scalar =~ tr///;
 # scalar variable $scalar =~ s///;
-    elsif (/\G ( \$ $qq_scalar ) /oxgc) {
+# substr() =~ tr///;
+# substr() =~ s///;
+    elsif (/\G ( \$ $qq_scalar | $qq_substr ) /oxgc) {
         my $scalar = e_string($1);
 
         if (/\G ( \s* (?: =~ | !~ ) \s* ) (?= (?: tr|y) \b ) /oxgc) {
@@ -4350,14 +4355,6 @@ sub e_sub {
         }
     }
 
-    my $local = '';
-    if ($variable_basename =~ /::/) {
-        $local = 'local';
-    }
-    else{
-        $local = 'my';
-    }
-
     my $sub = '';
 
     # with /r
@@ -4368,59 +4365,32 @@ sub e_sub {
         # s///gr with multibyte anchoring
         elsif ($modifier =~ /g/oxms) {
             $sub = sprintf(
-                #      1  2    3   4  5              6       7   8               9  10   11  1213    14      15           16            17      18     19          20         21               22
-                q<eval{%s %s_t=%s; %s %s_a=''; while(%s_t =~ %s){%s local $^W=0; %s %s_r=%s; %s%s_t="%s_a${1}%s_r$'"; pos(%s_t)=length "%s_a${1}%s_r"; %s_a=substr(%s_t,0,pos(%s_t)); } return %s_t}>,
+                #                        1                                              2   3                                 4   5
+                q<eval{local $EUCJP::re_t=%s; local $EUCJP::re_a=''; while($EUCJP::re_t =~ %s){%s local $^W=0; local $EUCJP::re_r=%s; %s$EUCJP::re_t="$EUCJP::re_a${1}$EUCJP::re_r$'"; pos($EUCJP::re_t)=length "$EUCJP::re_a${1}$EUCJP::re_r"; $EUCJP::re_a=substr($EUCJP::re_t,0,pos($EUCJP::re_t)); } return $EUCJP::re_t}>,
 
-                $local,                                                                       #  1
-                    $variable_basename,                                                       #  2
-                $variable,                                                                    #  3
-                $local,                                                                       #  4
-                    $variable_basename,                                                       #  5
-                    $variable_basename,                                                       #  6
-                ($delimiter1 eq "'") ?                                                        #  7
-                e_s1_q('m', $delimiter1, $end_delimiter1, $pattern, $modifier) :              #  :
-                e_s1  ('m', $delimiter1, $end_delimiter1, $pattern, $modifier),               #  :
-                $s_matched,                                                                   #  8
-                $local,                                                                       #  9
-                    $variable_basename,                                                       # 10
-                $e_replacement,                                                               # 11
-                sprintf('%s_r=eval %s_r; ', $variable_basename, $variable_basename) x $e_modifier, # 12
-                    $variable_basename,                                                       # 13
-                    $variable_basename,                                                       # 14
-                    $variable_basename,                                                       # 15
-                    $variable_basename,                                                       # 16
-                    $variable_basename,                                                       # 17
-                    $variable_basename,                                                       # 18
-                    $variable_basename,                                                       # 19
-                    $variable_basename,                                                       # 20
-                    $variable_basename,                                                       # 21
-                    $variable_basename,                                                       # 22
+                $variable,                                                       #  1
+                ($delimiter1 eq "'") ?                                           #  2
+                e_s1_q('m', $delimiter1, $end_delimiter1, $pattern, $modifier) : #  :
+                e_s1  ('m', $delimiter1, $end_delimiter1, $pattern, $modifier),  #  :
+                $s_matched,                                                      #  3
+                $e_replacement,                                                  #  4
+                '$EUCJP::re_r=eval $EUCJP::re_r; ' x $e_modifier,                  #  5
             );
         }
 
         # s///gr without multibyte anchoring
         elsif ($modifier =~ /g/oxms) {
             $sub = sprintf(
-                #      1  2    3         4       5   6               7  8    9   1011      12           13              14              15
-                q<eval{%s %s_t=%s; while(%s_t =~ %s){%s local $^W=0; %s %s_r=%s; %s%s_t="$`%s_r$'"; pos(%s_t)=length "$`%s_r"; } return %s_t}>,
+                #                        1                        2   3                                 4   5
+                q<eval{local $EUCJP::re_t=%s; while($EUCJP::re_t =~ %s){%s local $^W=0; local $EUCJP::re_r=%s; %s$EUCJP::re_t="$`$EUCJP::re_r$'"; pos($EUCJP::re_t)=length "$`$EUCJP::re_r"; } return $EUCJP::re_t}>,
 
-                $local,                                                                       #  1
-                    $variable_basename,                                                       #  2
-                $variable,                                                                    #  3
-                    $variable_basename,                                                       #  4
-                ($delimiter1 eq "'") ?                                                        #  5
-                e_s1_q('m', $delimiter1, $end_delimiter1, $pattern, $modifier) :              #  :
-                e_s1  ('m', $delimiter1, $end_delimiter1, $pattern, $modifier),               #  :
-                $s_matched,                                                                   #  6
-                $local,                                                                       #  7
-                    $variable_basename,                                                       #  8
-                $e_replacement,                                                               #  9
-                sprintf('%s_r=eval %s_r; ', $variable_basename, $variable_basename) x $e_modifier, # 10
-                    $variable_basename,                                                       # 11
-                    $variable_basename,                                                       # 12
-                    $variable_basename,                                                       # 13
-                    $variable_basename,                                                       # 14
-                    $variable_basename,                                                       # 15
+                $variable,                                                       #  1
+                ($delimiter1 eq "'") ?                                           #  2
+                e_s1_q('m', $delimiter1, $end_delimiter1, $pattern, $modifier) : #  :
+                e_s1  ('m', $delimiter1, $end_delimiter1, $pattern, $modifier),  #  :
+                $s_matched,                                                      #  3
+                $e_replacement,                                                  #  4
+                '$EUCJP::re_r=eval $EUCJP::re_r; ' x $e_modifier,                  #  5
             );
         }
 
@@ -4431,21 +4401,18 @@ sub e_sub {
             $prematch = q{${1}};
 
             $sub = sprintf(
-                #  1     2          3               4  5    6   7  8 9           10
-                q<(%s =~ %s) ? eval{%s local $^W=0; %s %s_r=%s; %s"%s%s_r$'" } : %s>,
+                #  1     2          3                                 4   5  6                    7
+                q<(%s =~ %s) ? eval{%s local $^W=0; local $EUCJP::re_r=%s; %s"%s$EUCJP::re_r$'" } : %s>,
 
-                $variable,                                                                    #  1
-                ($delimiter1 eq "'") ?                                                        #  2
-                e_s1_q('m', $delimiter1, $end_delimiter1, $pattern, $modifier) :              #  :
-                e_s1  ('m', $delimiter1, $end_delimiter1, $pattern, $modifier),               #  :
-                $s_matched,                                                                   #  3
-                $local,                                                                       #  4
-                    $variable_basename,                                                       #  5
-                $e_replacement,                                                               #  6
-                sprintf('%s_r=eval %s_r; ', $variable_basename, $variable_basename) x $e_modifier, #  7
-                $prematch,                                                                    #  8
-                    $variable_basename,                                                       #  9
-                $variable,                                                                    # 10
+                $variable,                                                       #  1
+                ($delimiter1 eq "'") ?                                           #  2
+                e_s1_q('m', $delimiter1, $end_delimiter1, $pattern, $modifier) : #  :
+                e_s1  ('m', $delimiter1, $end_delimiter1, $pattern, $modifier),  #  :
+                $s_matched,                                                      #  3
+                $e_replacement,                                                  #  4
+                '$EUCJP::re_r=eval $EUCJP::re_r; ' x $e_modifier,                  #  5
+                $prematch,                                                       #  6
+                $variable,                                                       #  7
             );
         }
 
@@ -4463,66 +4430,45 @@ sub e_sub {
         # s///g with multibyte anchoring
         elsif ($modifier =~ /g/oxms) {
             $sub = sprintf(
-                #      1  2       3  4              5     6   7               8  9    10  1112  13      14           15          16      17     18          19       20    21             2223
-                q<eval{%s %s_n=0; %s %s_a=''; while(%s =~ %s){%s local $^W=0; %s %s_r=%s; %s%s="%s_a${1}%s_r$'"; pos(%s)=length "%s_a${1}%s_r"; %s_a=substr(%s,0,pos(%s)); %s_n++} return %s%s_n}>,
+                #                                                       1     2   3                                 4   5 6                                      7                                                           8        9                           10
+                q<eval{local $EUCJP::re_n=0; local $EUCJP::re_a=''; while(%s =~ %s){%s local $^W=0; local $EUCJP::re_r=%s; %s%s="$EUCJP::re_a${1}$EUCJP::re_r$'"; pos(%s)=length "$EUCJP::re_a${1}$EUCJP::re_r"; $EUCJP::re_a=substr(%s,0,pos(%s)); $EUCJP::re_n++} return %s$EUCJP::re_n}>,
 
-                $local,                                                                       #  1
-                    $variable_basename,                                                       #  2
-                $local,                                                                       #  3
-                    $variable_basename,                                                       #  4
-                $variable,                                                                    #  5
-                ($delimiter1 eq "'") ?                                                        #  6
-                e_s1_q('m', $delimiter1, $end_delimiter1, $pattern, $modifier) :              #  :
-                e_s1  ('m', $delimiter1, $end_delimiter1, $pattern, $modifier),               #  :
-                $s_matched,                                                                   #  7
-                $local,                                                                       #  8
-                    $variable_basename,                                                       #  9
-                $e_replacement,                                                               # 10
-                sprintf('%s_r=eval %s_r; ', $variable_basename, $variable_basename) x $e_modifier, # 11
-                $variable,                                                                    # 12
-                    $variable_basename,                                                       # 13
-                    $variable_basename,                                                       # 14
-                $variable,                                                                    # 15
-                    $variable_basename,                                                       # 16
-                    $variable_basename,                                                       # 17
-                    $variable_basename,                                                       # 18
-                $variable,                                                                    # 19
-                $variable,                                                                    # 20
-                    $variable_basename,                                                       # 21
+                $variable,                                                       #  1
+                ($delimiter1 eq "'") ?                                           #  2
+                e_s1_q('m', $delimiter1, $end_delimiter1, $pattern, $modifier) : #  :
+                e_s1  ('m', $delimiter1, $end_delimiter1, $pattern, $modifier),  #  :
+                $s_matched,                                                      #  3
+                $e_replacement,                                                  #  4
+                '$EUCJP::re_r=eval $EUCJP::re_r; ' x $e_modifier,                  #  5
+                $variable,                                                       #  6
+                $variable,                                                       #  7
+                $variable,                                                       #  8
+                $variable,                                                       #  9
 
 # Binary "!~" is just like "=~" except the return value is negated in the logical sense.
 # It returns false if the match succeeds, and true if it fails.
 # (and so on)
 
-                ($bind_operator =~ / !~ /oxms) ? '!' : '',                                    # 22
-                    $variable_basename,                                                       # 23
+                ($bind_operator =~ / !~ /oxms) ? '!' : '',                       # 10
             );
         }
 
         # s///g without multibyte anchoring
         elsif ($modifier =~ /g/oxms) {
             $sub = sprintf(
-                #      1  2             3     4   5               6  7    8   9 10    11           12            13     14             1516
-                q<eval{%s %s_n=0; while(%s =~ %s){%s local $^W=0; %s %s_r=%s; %s%s="$`%s_r$'"; pos(%s)=length "$`%s_r"; %s_n++} return %s%s_n}>,
+                #                                 1     2   3                                 4   5 6                         7                                                 8
+                q<eval{local $EUCJP::re_n=0; while(%s =~ %s){%s local $^W=0; local $EUCJP::re_r=%s; %s%s="$`$EUCJP::re_r$'"; pos(%s)=length "$`$EUCJP::re_r"; $EUCJP::re_n++} return %s$EUCJP::re_n}>,
 
-                $local,                                                                       #  1
-                    $variable_basename,                                                       #  2
-                $variable,                                                                    #  3
-                ($delimiter1 eq "'") ?                                                        #  4
-                e_s1_q('m', $delimiter1, $end_delimiter1, $pattern, $modifier) :              #  :
-                e_s1  ('m', $delimiter1, $end_delimiter1, $pattern, $modifier),               #  :
-                $s_matched,                                                                   #  5
-                $local,                                                                       #  6
-                    $variable_basename,                                                       #  7
-                $e_replacement,                                                               #  8
-                sprintf('%s_r=eval %s_r; ', $variable_basename, $variable_basename) x $e_modifier, #  9
-                $variable,                                                                    # 10
-                    $variable_basename,                                                       # 11
-                $variable,                                                                    # 12
-                    $variable_basename,                                                       # 13
-                    $variable_basename,                                                       # 14
-                ($bind_operator =~ / !~ /oxms) ? '!' : '',                                    # 15
-                    $variable_basename,                                                       # 16
+                $variable,                                                       #  1
+                ($delimiter1 eq "'") ?                                           #  2
+                e_s1_q('m', $delimiter1, $end_delimiter1, $pattern, $modifier) : #  :
+                e_s1  ('m', $delimiter1, $end_delimiter1, $pattern, $modifier),  #  :
+                $s_matched,                                                      #  3
+                $e_replacement,                                                  #  4
+                '$EUCJP::re_r=eval $EUCJP::re_r; ' x $e_modifier,                  #  5
+                $variable,                                                       #  6
+                $variable,                                                       #  7
+                ($bind_operator =~ / !~ /oxms) ? '!' : '',                       #  8
             );
         }
 
@@ -4536,25 +4482,22 @@ sub e_sub {
 
                 ($bind_operator =~ / =~ /oxms) ?
 
-                #  1 2 3          4               5  6    7   8 9   1011
-                q<(%s%s%s) ? eval{%s local $^W=0; %s %s_r=%s; %s%s="%s%s_r$'"; 1 } : undef> :
+                #  1 2 3          4                                 5   6 7   8
+                q<(%s%s%s) ? eval{%s local $^W=0; local $EUCJP::re_r=%s; %s%s="%s$EUCJP::re_r$'"; 1 } : undef> :
 
-                #  1 2 3              4               5  6    7   8 9   1011
-                q<(%s%s%s) ? 1 : eval{%s local $^W=0; %s %s_r=%s; %s%s="%s%s_r$'"; undef }>,
+                #  1 2 3              4                                 5   6 7   8
+                q<(%s%s%s) ? 1 : eval{%s local $^W=0; local $EUCJP::re_r=%s; %s%s="%s$EUCJP::re_r$'"; undef }>,
 
-                $variable,                                                                    #  1
-                $bind_operator,                                                               #  2
-                ($delimiter1 eq "'") ?                                                        #  3
-                e_s1_q('m', $delimiter1, $end_delimiter1, $pattern, $modifier) :              #  :
-                e_s1  ('m', $delimiter1, $end_delimiter1, $pattern, $modifier),               #  :
-                $s_matched,                                                                   #  4
-                $local,                                                                       #  5
-                    $variable_basename,                                                       #  6
-                $e_replacement,                                                               #  7
-                sprintf('%s_r=eval %s_r; ', $variable_basename, $variable_basename) x $e_modifier, #  8
-                $variable,                                                                    #  9
-                $prematch,                                                                    # 10
-                    $variable_basename,                                                       # 11
+                $variable,                                                       #  1
+                $bind_operator,                                                  #  2
+                ($delimiter1 eq "'") ?                                           #  3
+                e_s1_q('m', $delimiter1, $end_delimiter1, $pattern, $modifier) : #  :
+                e_s1  ('m', $delimiter1, $end_delimiter1, $pattern, $modifier),  #  :
+                $s_matched,                                                      #  4
+                $e_replacement,                                                  #  5
+                '$EUCJP::re_r=eval $EUCJP::re_r; ' x $e_modifier,                  #  6
+                $variable,                                                       #  7
+                $prematch,                                                       #  8
             );
         }
     }
@@ -5470,7 +5413,7 @@ The character classes are redefined as follows to backward compatibility.
    .            ${Eeucjp::dot}
                 ${Eeucjp::dot_s}    (/s modifier)
   \d            [0-9]
-  \s            [\x09\x0A\x0C\x0D\x20]
+  \s            \s
   \w            [0-9A-Z_a-z]
   \D            ${Eeucjp::eD}
   \S            ${Eeucjp::eS}
@@ -5501,7 +5444,7 @@ Also POSIX-style character classes.
                 [\x41-\x5A\x61-\x7A]     (/i modifier)
   [:print:]     [\x20-\x7F]
   [:punct:]     [\x21-\x2F\x3A-\x3F\x40\x5B-\x5F\x60\x7B-\x7E]
-  [:space:]     [\x09\x0A\x0B\x0C\x0D\x20]
+  [:space:]     [\s\x0B]
   [:upper:]     [\x41-\x5A]
                 [\x41-\x5A\x61-\x7A]     (/i modifier)
   [:word:]      [\x30-\x39\x41-\x5A\x5F\x61-\x7A]
@@ -5544,7 +5487,7 @@ Definitions in Eeucjp.pm.
   ${Eeucjp::dot}            qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x0A])}
   ${Eeucjp::dot_s}          qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE])}
   ${Eeucjp::eD}             qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE0-9])}
-  ${Eeucjp::eS}             qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x09\x0A\x0C\x0D\x20])}
+  ${Eeucjp::eS}             qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\s])}
   ${Eeucjp::eW}             qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE0-9A-Z_a-z])}
   ${Eeucjp::eH}             qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x09\x20])}
   ${Eeucjp::eV}             qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x0A\x0B\x0C\x0D])}
@@ -5561,7 +5504,7 @@ Definitions in Eeucjp.pm.
   ${Eeucjp::not_lower_i}    qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE])}
   ${Eeucjp::not_print}      qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x20-\x7F])}
   ${Eeucjp::not_punct}      qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x21-\x2F\x3A-\x3F\x40\x5B-\x5F\x60\x7B-\x7E])}
-  ${Eeucjp::not_space}      qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x09\x0A\x0B\x0C\x0D\x20])}
+  ${Eeucjp::not_space}      qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\s\x0B])}
   ${Eeucjp::not_upper}      qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x41-\x5A])}
   ${Eeucjp::not_upper_i}    qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE])}
   ${Eeucjp::not_word}       qr{(?:\x8F[\xA1-\xFE][\xA1-\xFE]|[\x8E\xA1-\xFE][\x00-\xFF]|[^\x8E\x8F\xA1-\xFE\x30-\x39\x41-\x5A\x5F\x61-\x7A])}
@@ -5795,34 +5738,71 @@ oriented function. See 'Character-Oriented Functions'.
 
   This function extracts a substring out of the string given by $string and returns
   it. The substring is extracted starting at $offset characters from the front of
-  the string.
-  If $offset is negative, the substring starts that far from the end of the string
-  instead. If $length is omitted, everything to the end of the string is returned.
-  If $length is negative, the length is calculated to leave that many characters off
-  the end of the string. Otherwise, $length indicates the length of the substring to
-  extract, which is sort of what you'd expect.
+  the string. First character is at offset zero. If $offset is negative, starts that
+  far back from the end of the string.
+  If $length is omitted, returns everything through the end of the string. If $length
+  is negative, leaves that many characters off the end of the string. Otherwise,
+  $length indicates the length of the substring to extract, which is sort of what
+  you'd expect.
 
-  For bytes, use the substr from built-in Perl functions.
+  my $s = "The black cat climbed the green tree";
+  my $color  = EUCJP::substr $s, 4, 5;      # black
+  my $middle = EUCJP::substr $s, 4, -11;    # black cat climbed the
+  my $end    = EUCJP::substr $s, 14;        # climbed the green tree
+  my $tail   = EUCJP::substr $s, -4;        # tree
+  my $z      = EUCJP::substr $s, -4, 2;     # tr
 
-  An alternative to using EUCJP::substr as an lvalue is to specify the $replacement
-  string as the fourth argument. This lets you replace parts of the $string and return
-  what was there before in one operation, just as you can with splice. The next
-  example also replaces the last character of $var with "Curly" and puts that replaced
-  character into $oldstr: 
+  If Perl version 5.14 or later, you can use the EUCJP::substr() function as an
+  lvalue. In its case $string must itself be an lvalue. If you assign something
+  shorter than $length, the string will shrink, and if you assign something longer
+  than $length, the string will grow to accommodate it. To keep the string the
+  same length, you may need to pad or chop your value using sprintf.
 
-  $oldstr = EUCJP::substr($var, -1, 1, "Curly");
+  If $offset and $length specify a substring that is partly outside the string,
+  only the part within the string is returned. If the substring is beyond either
+  end of the string, EUCJP::substr() returns the undefined value and produces a
+  warning. When used as an lvalue, specifying a substring that is entirely outside
+  the string raises an exception. Here's an example showing the behavior for
+  boundary cases:
 
-  To prepend the string "Larry" to the current value of $var, use:
+  my $name = 'fred';
+  EUCJP::substr($name, 4) = 'dy';         # $name is now 'freddy'
+  my $null = EUCJP::substr $name, 6, 2;   # returns "" (no warning)
+  my $oops = EUCJP::substr $name, 7;      # returns undef, with warning
+  EUCJP::substr($name, 7) = 'gap';        # raises an exception
 
-  EUCJP::substr($var, 0, 0, "Larry");
+  An alternative to using EUCJP::substr() as an lvalue is to specify the replacement
+  string as the 4th argument. This allows you to replace parts of the $string and
+  return what was there before in one operation, just as you can with splice().
 
-  To instead replace the first character of $var with "Moe", use:
+  my $s = "The black cat climbed the green tree";
+  my $z = EUCJP::substr $s, 14, 7, "jumped from";    # climbed
+  # $s is now "The black cat jumped from the green tree"
 
-  EUCJP::substr($var, 0, 1, "Moe");
+  Note that the lvalue returned by the three-argument version of EUCJP::substr() acts
+  as a 'magic bullet'; each time it is assigned to, it remembers which part of the
+  original string is being modified; for example:
 
-  And, finally, to replace the last character of $var with "Curly", use:
+  $x = '1234';
+  for (EUCJP::substr($x,1,2)) {
+      $_ = 'a';   print $x,"\n";    # prints 1a4
+      $_ = 'xyz'; print $x,"\n";    # prints 1xyz4
+      $x = '56789';
+      $_ = 'pq';  print $x,"\n";    # prints 5pq9
+  }
 
-  EUCJP::substr($var, -1, 1, "Curly");
+  With negative offsets, it remembers its position from the end of the string when
+  the target string is modified:
+
+  $x = '1234';
+  for (EUCJP::substr($x, -3, 2)) {
+      $_ = 'a';   print $x,"\n";    # prints 1a4, as above
+      $x = 'abcdefg';
+      print $_,"\n";                # prints f
+  }
+
+  Prior to Perl version 5.10, the result of using an lvalue multiple times was
+  unspecified. Prior to 5.16, the result with negative offsets was unspecified.
 
 =item * Index by EUC-JP Character
 
@@ -6287,6 +6267,11 @@ The concept of this software is not to use two or more encoding methods at the
 same time. Therefore, modifier /a /d /l and /u are not supported.
 \d means [0-9] always.
 
+=item * eval "string"
+
+The function which escapes "string" of eval has not been implemented yet. It will
+be supported in future versions.
+
 =back
 
 =head1 AUTHOR
@@ -6422,6 +6407,8 @@ It is impossible. Because the following time is necessary.
 
 (2) Time of processing regular expression by escaped script while
     multibyte anchoring.
+
+Someday, I want to ask Larry Wall about this goal in the elevator.
 
 =item * Goal #4:
 
