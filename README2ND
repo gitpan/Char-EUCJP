@@ -1,14 +1,12 @@
 NAME
 
-       Char::EUCJP - Source code filter for EUC-JP script (Imitation JPerl)
+       EUCJP - Source code filter for EUC-JP script (Imitation JPerl)
 
 SYNOPSIS
 
     In your script:
 
-      use Char::EUCJP; # CPAN formal style
-         or
-      use EUCJP; # casual style
+      use EUCJP;
 
     At command prompt:
 
