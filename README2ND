@@ -111,7 +111,7 @@ The distinction is done only by first octet.
       Third octet   0xA1-0xFE
 
     MALFORMED single octet code is:
-      0x80-0xA0 and 0xE0-0xFE
+      0x8E-0x8F and 0xA1-0xFE
       * Final octet of string like first octet of multiple octet code
 
 See also code table:
@@ -293,7 +293,7 @@ following character codes are effective.
       Second octet  0xA1-0xFE
       Third octet   0xA1-0xFE
 
-For instance, [\x81\x00-\x82\xFF] in script means [\x81\x82][\x40-\x7E\x80-\xFE].
+For instance, [\xA1\x00-\xA2\xFF] in script means [\xA1\xA2][\xA1-\xFE].
 
 See also code table:
 

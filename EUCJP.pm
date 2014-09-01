@@ -17,7 +17,7 @@ use 5.00503;    # Galapagos Consensus 1998 for primetools
 # (and so on)
 
 BEGIN { eval q{ use vars qw($VERSION) } }
-$VERSION = sprintf '%d.%02d', q$Revision: 0.99 $ =~ /(\d+)/oxmsg;
+$VERSION = sprintf '%d.%02d', q$Revision: 1.00 $ =~ /(\d+)/oxmsg;
 
 BEGIN {
     if ($^X =~ / jperl /oxmsi) {
@@ -1828,6 +1828,12 @@ sub escape {
 
             ) /oxgc) { $slash = 'div'; return $1; }
 
+    # yada-yada or triple-dot operator
+    elsif (/\G (
+            \.\.\.
+
+            ) /oxgc) { $slash = 'm//'; return q{die('Unimplemented')}; }
+
     # any operator before m//
 
     # //, //= (defined-or)
@@ -1867,7 +1873,7 @@ sub escape {
             >>= | >> | >= | > |
             \*\*= | \*\* | \*= | \* |
             \+= | \+ |
-            \.\.\. | \.\. | \.= | \. |
+            \.\. | \.= | \. |
             \/\/= | \/\/ |
             \/= | \/ |
             \? |
@@ -2413,6 +2419,12 @@ E_STRING_LOOP:
 
             ) /oxgc) { $slash = 'div'; $e_string .= $1; }
 
+        # yada-yada or triple-dot operator
+        elsif ($string =~ /\G (
+            \.\.\.
+
+            ) /oxgc) { $slash = 'm//'; $e_string .= q{die('Unimplemented')}; }
+
         # any operator before m//
         elsif ($string =~ /\G (
 
@@ -2427,7 +2439,7 @@ E_STRING_LOOP:
             >>= | >> | >= | > |
             \*\*= | \*\* | \*= | \* |
             \+= | \+ |
-            \.\.\. | \.\. | \.= | \. |
+            \.\. | \.= | \. |
             \/\/= | \/\/ |
             \/= | \/ |
             \? |

@@ -1,3 +1,6 @@
+#
+# This file is *** FOR CPAN USE ONLY ***.
+#
 package Char::Eeucjp;
 ######################################################################
 #
@@ -17,7 +20,7 @@ use 5.00503;    # Galapagos Consensus 1998 for primetools
 # (and so on)
 
 BEGIN { eval q{ use vars qw($VERSION) } }
-$VERSION = sprintf '%d.%02d', q$Revision: 0.99 $ =~ /(\d+)/xmsg;
+$VERSION = sprintf '%d.%02d', q$Revision: 1.00 $ =~ /(\d+)/xmsg;
 
 BEGIN {
     if ($^X =~ / jperl /oxmsi) {
@@ -353,6 +356,18 @@ if (($] >= 5.010001) or
     # GB18030 encoding
     if (__PACKAGE__ =~ / \b Egb18030 \z/oxms) {
         ${Char::Eeucjp::q_char_SADAHIRO_Tomoyuki_2002_01_17} = qr{.*?[^\x30-\x39\x81-\xFE](?:[\x30-\x39]|[\x81-\xFE][\x30-\x39][\x81-\xFE][\x30-\x39]|[\x81-\xFE]{2})*?}oxms;
+        #                                                     ********************* octets not in multiple octet char (always char boundary)
+        #                                                                             *********** 1 octet chars in multiple octet char
+        #                                                                                         ******************************************** 4 octet chars
+        #                                                                                                                                      ************** 2 octet chars
+    }
+
+    # EUC-TW encoding
+    elsif (__PACKAGE__ =~ / \b Eeuctw \z/oxms) {
+        ${Char::Eeucjp::q_char_SADAHIRO_Tomoyuki_2002_01_17} = qr{.*?[^\x8E\xA1-\xFE]     (?:            \x8E[\xA1-\xB0][\xA1-\xFE]{2}|               [\xA1-\xFE]{2})*?}oxms;
+        #                                                     **************** octets not in multiple octet char (always char boundary)
+        #                                                                                         ***************************** 4 octet chars
+        #                                                                                                                                      ************** 2 octet chars
     }
 
     # other encoding
